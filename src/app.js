@@ -150,12 +150,19 @@ const places = [
   { name: "포장실", x: 30, y: 42, w: 10, kind: "pack", sprite: [4, 1] }
 ];
 
+const WORLD = {
+  width: 2240,
+  height: 1260,
+  playerSpeed: 250,
+  interactionRadius: 120
+};
+
 const state = {
   screen: "start",
   character: null,
   missionIndex: 0,
   cards: [],
-  player: { x: 48, y: 50 },
+  player: { x: WORLD.width * 0.48, y: WORLD.height * 0.5 },
   overlay: null,
   selectedQuizCard: null,
   quizBins: { production: [], consumption: [] },
@@ -165,6 +172,16 @@ const state = {
     buildingSheetReady: false
   }
 };
+
+const input = {
+  up: false,
+  down: false,
+  left: false,
+  right: false
+};
+
+let movementLoopStarted = false;
+let lastFrameTime = 0;
 
 function mission(id, title, description, type, game, place, feedback, reward) {
   return { id, title, description, type, game, place, feedback, reward };
@@ -261,7 +278,7 @@ function chooseCharacter(id) {
   state.character = characters.find((c) => c.id === id);
   state.missionIndex = 0;
   state.cards = [];
-  state.player = { x: 48, y: 50 };
+  state.player = { x: WORLD.width * 0.48, y: WORLD.height * 0.5 };
   state.overlay = "intro";
   state.lastAward = null;
   state.quizBins = { production: [], consumption: [] };
@@ -294,16 +311,18 @@ function mapScreen() {
       </div>
     </aside>
     <div class="town-wrap">
-      <div class="town-map" tabindex="0" aria-label="마을 지도">
-        <img class="map-base-image" src="./src/assets/maps/base-town-map.png" alt="" onerror="this.hidden=true" />
-        <div class="fallback-map-art" aria-hidden="true">
-          <div class="tile road h1"></div><div class="tile road h2"></div><div class="tile road v1"></div><div class="tile road v2"></div>
-          <div class="pond"></div><div class="field"></div><div class="trees"></div>
-        </div>
-        ${places.map((p) => placeNode(p, current, target)).join("")}
-        <div class="player" style="left:${state.player.x}%; top:${state.player.y}%;">
-          <img src="./src/assets/characters/${c.id}-idle.png" alt="" onerror="this.hidden=true" />
-          <span>${c.icon}</span>
+      <div class="town-viewport" tabindex="0" aria-label="마을 지도">
+        <div class="town-world" style="width:${WORLD.width}px; height:${WORLD.height}px;">
+          <img class="map-base-image" src="./src/assets/maps/base-town-map.png" alt="" onerror="this.hidden=true" />
+          <div class="fallback-map-art" aria-hidden="true">
+            <div class="tile road h1"></div><div class="tile road h2"></div><div class="tile road v1"></div><div class="tile road v2"></div>
+            <div class="pond"></div><div class="field"></div><div class="trees"></div>
+          </div>
+          ${places.map((p) => placeNode(p, current, target)).join("")}
+          <div class="player" style="left:${state.player.x}px; top:${state.player.y}px;">
+            <img src="./src/assets/characters/${c.id}-idle.png" alt="" onerror="this.hidden=true" />
+            <span>${c.icon}</span>
+          </div>
         </div>
       </div>
       <div class="map-footer">
@@ -318,11 +337,17 @@ function mapScreen() {
         <button data-move="down">▼</button>
         <button data-move="right">▶</button>
       </div>
+      <button class="action-button" ${near ? "" : "disabled"} data-action-button>A</button>
     </div>
   `;
   bindMovement(screen);
   const startButton = screen.querySelector("[data-start-mission]");
   startButton?.addEventListener("click", () => {
+    state.overlay = current.game;
+    render();
+  });
+  screen.querySelector("[data-action-button]")?.addEventListener("click", () => {
+    if (!isNear(state.player, target)) return;
     state.overlay = current.game;
     render();
   });
@@ -638,7 +663,11 @@ function awardThenContinue() {
     state.screen = "quiz";
   } else {
     const next = getTargetPlace(state.character.missions[state.missionIndex]);
-    state.player = { x: clamp(next.x - 10, 8, 86), y: clamp(next.y + 12, 12, 78) };
+    const pos = placePosition(next);
+    state.player = {
+      x: clamp(pos.x - 150, 70, WORLD.width - 70),
+      y: clamp(pos.y + 180, 70, WORLD.height - 70)
+    };
   }
   render();
   setTimeout(() => showToast(`${current.type === "production" ? "생산" : "소비"} 활동 카드 획득! ${current.reward[1]} ${current.title}`), 60);
@@ -838,8 +867,9 @@ function placeNode(p, current, target) {
   const active = target && p.name === target.name ? "active" : "";
   const sheetReady = state.assets.buildingSheetReady ? "sheet-ready" : "";
   const [sx, sy] = p.sprite;
+  const pos = placePosition(p);
   return `
-    <div class="place ${p.kind} ${active} ${sheetReady}" style="left:${p.x}%; top:${p.y}%; --place-w:${p.w || 10}%; --sprite-x:${sx * 25}%; --sprite-y:${sy * 100}%;">
+    <div class="place ${p.kind} ${active} ${sheetReady}" style="left:${pos.x}px; top:${pos.y}px; --place-w:${(p.w || 10) * 16}px; --sprite-x:${sx * 25}%; --sprite-y:${sy * 100}%;">
       <span class="building-sprite" aria-hidden="true"></span>
       <span class="roof">${placeIcon(p.kind)}</span>
       <b>${p.name}</b>
@@ -876,34 +906,128 @@ function itemIcon(m) {
 }
 
 function bindMovement(screen) {
-  const move = (dir) => {
-    const step = 6;
-    if (dir === "up") state.player.y -= step;
-    if (dir === "down") state.player.y += step;
-    if (dir === "left") state.player.x -= step;
-    if (dir === "right") state.player.x += step;
-    state.player.x = clamp(state.player.x, 6, 90);
-    state.player.y = clamp(state.player.y, 10, 82);
-    render();
-  };
   screen.querySelectorAll("[data-move]").forEach((button) => {
-    button.addEventListener("click", () => move(button.dataset.move));
-  });
-  screen.querySelector(".town-map").addEventListener("keydown", (event) => {
-    const keys = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right", w: "up", s: "down", a: "left", d: "right" };
-    if (keys[event.key]) {
+    const dir = button.dataset.move;
+    const press = (event) => {
       event.preventDefault();
-      move(keys[event.key]);
-    }
+      input[dir] = true;
+    };
+    const release = (event) => {
+      event.preventDefault();
+      input[dir] = false;
+    };
+    button.addEventListener("pointerdown", press);
+    button.addEventListener("pointerup", release);
+    button.addEventListener("pointercancel", release);
+    button.addEventListener("pointerleave", release);
   });
 }
 
 function isNear(player, target) {
-  return Math.abs(player.x - target.x) < 12 && Math.abs(player.y - target.y) < 14;
+  const pos = placePosition(target);
+  return Math.hypot(player.x - pos.x, player.y - pos.y) < WORLD.interactionRadius;
+}
+
+function placePosition(place) {
+  return {
+    x: (place.x / 100) * WORLD.width,
+    y: (place.y / 100) * WORLD.height
+  };
 }
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+
+function setupGlobalInput() {
+  const keys = {
+    ArrowUp: "up",
+    ArrowDown: "down",
+    ArrowLeft: "left",
+    ArrowRight: "right",
+    w: "up",
+    W: "up",
+    s: "down",
+    S: "down",
+    a: "left",
+    A: "left",
+    d: "right",
+    D: "right"
+  };
+  window.addEventListener("keydown", (event) => {
+    if (event.code === "Space" && state.screen === "map" && !state.overlay) {
+      const current = state.character?.missions[state.missionIndex];
+      if (current && isNear(state.player, getTargetPlace(current))) {
+        event.preventDefault();
+        state.overlay = current.game;
+        render();
+      }
+      return;
+    }
+    const dir = keys[event.key];
+    if (!dir || state.screen !== "map" || state.overlay) return;
+    event.preventDefault();
+    input[dir] = true;
+  });
+  window.addEventListener("keyup", (event) => {
+    const dir = keys[event.key];
+    if (!dir) return;
+    event.preventDefault();
+    input[dir] = false;
+  });
+}
+
+function updateMapFrame(time = performance.now()) {
+  if (!movementLoopStarted) {
+    movementLoopStarted = true;
+    lastFrameTime = time;
+  }
+  const delta = Math.min(0.05, (time - lastFrameTime) / 1000 || 0);
+  lastFrameTime = time;
+
+  if (state.screen === "map" && !state.overlay) {
+    let dx = 0;
+    let dy = 0;
+    if (input.up) dy -= 1;
+    if (input.down) dy += 1;
+    if (input.left) dx -= 1;
+    if (input.right) dx += 1;
+    if (dx || dy) {
+      const length = Math.hypot(dx, dy);
+      state.player.x = clamp(state.player.x + (dx / length) * WORLD.playerSpeed * delta, 50, WORLD.width - 50);
+      state.player.y = clamp(state.player.y + (dy / length) * WORLD.playerSpeed * delta, 70, WORLD.height - 50);
+    }
+    syncMapDom();
+  }
+  requestAnimationFrame(updateMapFrame);
+}
+
+function syncMapDom() {
+  const viewport = $(".town-viewport");
+  const world = $(".town-world");
+  const player = $(".player");
+  if (!viewport || !world || !player || !state.character) return;
+  const vw = viewport.clientWidth;
+  const vh = viewport.clientHeight;
+  const cameraX = clamp(state.player.x - vw / 2, 0, Math.max(0, WORLD.width - vw));
+  const cameraY = clamp(state.player.y - vh / 2, 0, Math.max(0, WORLD.height - vh));
+  world.style.transform = `translate(${-cameraX}px, ${-cameraY}px)`;
+  player.style.left = `${state.player.x}px`;
+  player.style.top = `${state.player.y}px`;
+
+  const current = state.character.missions[state.missionIndex];
+  if (!current) return;
+  const near = isNear(state.player, getTargetPlace(current));
+  const startButton = $("[data-start-mission]");
+  const actionButton = $("[data-action-button]");
+  const dialog = $(".dialog-bubble");
+  if (startButton) startButton.disabled = !near;
+  if (actionButton) actionButton.disabled = !near;
+  if (dialog) {
+    dialog.innerHTML = near
+      ? `<b>${state.character.npc}</b> ${current.game === "scene" ? "이제 소비 장면을 살펴봐요." : "도착했어요. 일을 시작해 볼까요?"}`
+      : `반짝이는 느낌표가 있는 <b>${current.place}</b>로 이동해요.`;
+  }
 }
 
 function showToast(text) {
@@ -920,4 +1044,6 @@ function el(tag, className = "", text = "") {
 }
 
 preloadAssets();
+setupGlobalInput();
+requestAnimationFrame(updateMapFrame);
 render();
