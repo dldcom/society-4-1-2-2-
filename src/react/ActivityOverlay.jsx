@@ -5,7 +5,9 @@ export function ActivityOverlay({ place, progress, onClose, onCompleteJob, onBuy
   const jobs = useMemo(() => getJobsAtPlace(place.id), [place.id]);
   const consumptions = useMemo(() => getConsumptionsAtPlace(place.id), [place.id]);
   const [activeJob, setActiveJob] = useState(null);
+  const [mode, setMode] = useState("talk");
   const [message, setMessage] = useState("");
+  const npc = place.npc ?? { name: `${place.name} 주인`, role: "동네 주민", portrait: "🙂", greeting: "어서 와. 무슨 일로 들렀어?" };
 
   if (activeJob) {
     return (
@@ -13,7 +15,7 @@ export function ActivityOverlay({ place, progress, onClose, onCompleteJob, onBuy
         <div className="modal game-modal">
           <div className="game-head">
             <div>
-              <p className="eyebrow">{place.name}</p>
+              <p className="eyebrow">{npc.name}의 부탁</p>
               <h2>{activeJob.icon} {activeJob.title}</h2>
             </div>
             <button className="icon-button" onClick={() => setActiveJob(null)}>X</button>
@@ -30,51 +32,88 @@ export function ActivityOverlay({ place, progress, onClose, onCompleteJob, onBuy
     );
   }
 
+  const askJob = () => {
+    setMode("jobs");
+    setMessage(jobs.length ? npc.jobLine ?? "마침 부탁할 일이 하나 있어. 해 볼래?" : npc.noJobLine ?? "오늘은 맡길 일이 없네. 다른 가게도 한번 들러 봐.");
+  };
+
+  const askShop = () => {
+    setMode("shop");
+    setMessage(consumptions.length ? npc.shopLine ?? "좋아. 천천히 둘러보고 마음에 드는 걸 골라 봐." : npc.noShopLine ?? "지금은 팔 만한 게 없어. 그래도 들러 줘서 고마워.");
+  };
+
+  const buy = (item) => {
+    const queued = onBuyConsumption(item);
+    if (queued) onClose();
+    else setMessage("앗, 코인이 조금 모자라. 알바를 하나 하고 다시 와 볼래?");
+  };
+
+  const line = message || npc.greeting || "어서 와. 무슨 일로 들렀어?";
+
   return (
-    <div className="overlay">
-      <div className="modal activity-modal">
-        <div className="game-head">
-          <div>
-            <p className="eyebrow">{place.icon ?? "📍"} {place.name}</p>
-            <h2>여기서 할 일</h2>
+    <div className="overlay npc-rpg-overlay">
+      <div className="npc-rpg-layer">
+        <button className="icon-button npc-close-button" onClick={onClose}>X</button>
+
+        {mode === "talk" && (
+          <div className="npc-choice-panel npc-choice-compact">
+            {place.id === "board" && <div className="board-note npc-board-note"><b>오늘의 목표</b><span>알바로 생산 활동을 경험하고, 번 코인으로 소비 활동도 해 봐요.</span></div>}
+            <button className="primary" onClick={askJob}>알바할 거리가 있나요?</button>
+            <button className="secondary" onClick={askShop}>물건을 사러 왔어요</button>
           </div>
-          <button className="icon-button" onClick={onClose}>X</button>
-        </div>
-        <div className="activity-body">
-          {place.id === "board" && <div className="board-note"><b>오늘의 목표</b><span>알바를 해서 코인을 벌고, 번 코인으로 소비 활동을 해 봐요. 마지막에는 생산 활동과 소비 활동을 분류합니다.</span></div>}
-          <div className="activity-list">
-            {jobs.map((job) => {
-              const done = progress.completedJobs.includes(job.id);
-              const tired = progress.energy < job.energyCost;
-              return <article className="activity-option production" key={job.id}>
-                <div className="activity-icon">{job.icon}</div>
-                <div><p className="eyebrow">알바 · 생산 활동</p><h3>{job.title}</h3><p>{job.goal}</p><small>보상 {job.rewardCoins}코인 · 체력 -{job.energyCost}</small></div>
-                <button className="primary" disabled={done || tired} onClick={() => setActiveJob(job)}>{done ? "완료" : tired ? "체력 부족" : "알바 시작"}</button>
-              </article>;
-            })}
-            {consumptions.map((item) => {
-              const bought = progress.completedConsumptions.includes(item.id);
-              const poor = progress.coins < item.costCoins;
-              return <article className="activity-option consumption" key={item.id}>
-                <div className="activity-icon">{item.icon}</div>
-                <div><p className="eyebrow">소비 활동</p><h3>{item.title}</h3><p>{item.card.feedback}</p><small>{item.costCoins}코인 사용{item.energyGain ? ` · 체력 +${item.energyGain}` : ""}</small></div>
-                <button className="secondary" disabled={bought || poor} onClick={() => {
-                  if (poor) return setMessage("코인이 부족해요. 알바를 먼저 해 볼까요?");
-                  onBuyConsumption(item);
-                  onClose();
-                }}>{bought ? "완료" : poor ? "코인 부족" : "소비하기"}</button>
-              </article>;
-            })}
-            {!jobs.length && !consumptions.length && place.id !== "board" && <div className="board-note"><b>아직 준비 중</b><span>이 장소의 알바와 소비는 다음 버전에 추가할게요.</span></div>}
+        )}
+
+        {mode === "jobs" && (
+          <div className="npc-choice-panel npc-activity-panel">
+            <div className="npc-panel-head"><b>알바할 거리</b><button className="ghost" onClick={() => setMode("talk")}>돌아가기</button></div>
+            <ActivityList jobs={jobs} consumptions={[]} progress={progress} onStartJob={setActiveJob} onBuy={buy} />
           </div>
-          {message && <p className="game-message">{message}</p>}
-        </div>
+        )}
+
+        {mode === "shop" && (
+          <div className="npc-choice-panel npc-activity-panel">
+            <div className="npc-panel-head"><b>살 수 있는 것</b><button className="ghost" onClick={() => setMode("talk")}>돌아가기</button></div>
+            <ActivityList jobs={[]} consumptions={consumptions} progress={progress} onStartJob={setActiveJob} onBuy={buy} />
+          </div>
+        )}
+
+        <section className="npc-bottom-dialog" aria-label={`${npc.name} 대화`}>
+          <div className="npc-portrait-card rpg-portrait">
+            <span>{npc.portrait ?? place.icon ?? "🙂"}</span>
+          </div>
+          <div className="npc-dialog-text">
+            <div className="npc-nameplate"><b>{npc.name}</b><span>{npc.role}</span></div>
+            <p>{line}</p>
+          </div>
+        </section>
       </div>
     </div>
   );
 }
 
-function MiniGame({ job, onComplete }) {
+function ActivityList({ jobs, consumptions, progress, onStartJob, onBuy }) {
+  return <div className="activity-list">
+    {jobs.map((job) => {
+      const done = progress.completedJobs.includes(job.id);
+      const tired = progress.energy < job.energyCost;
+      return <article className="activity-option production" key={job.id}>
+        <div className="activity-icon">{job.icon}</div>
+        <div><p className="eyebrow">알바 · 생산 활동</p><h3>{job.title}</h3><p>{job.goal}</p><small>보상 {job.rewardCoins}코인 · 체력 -{job.energyCost}</small></div>
+        <button className="primary" disabled={done || tired} onClick={() => onStartJob(job)}>{done ? "완료" : tired ? "체력 부족" : "알바 시작"}</button>
+      </article>;
+    })}
+    {consumptions.map((item) => {
+      const bought = progress.completedConsumptions.includes(item.id);
+      const poor = progress.coins < item.costCoins;
+      return <article className="activity-option consumption" key={item.id}>
+        <div className="activity-icon">{item.icon}</div>
+        <div><p className="eyebrow">소비 활동</p><h3>{item.title}</h3><p>{item.card.feedback}</p><small>{item.costCoins}코인 사용{item.energyGain ? ` · 체력 +${item.energyGain}` : ""}</small></div>
+        <button className="secondary" disabled={bought || poor} onClick={() => onBuy(item)}>{bought ? "완료" : poor ? "코인 부족" : "소비하기"}</button>
+      </article>;
+    })}
+    {!jobs.length && !consumptions.length && <div className="board-note"><b>아직 준비 중</b><span>이 장소의 활동은 다음 버전에 추가할게요.</span></div>}
+  </div>;
+}function MiniGame({ job, onComplete }) {
   if (job.engine === "careGauge") return <CareGaugeGame job={job} onComplete={onComplete} />;
   if (job.engine === "wirePuzzle") return <WirePuzzleGame job={job} onComplete={onComplete} />;
   if (job.engine === "roleRhythm") return <RoleRhythmGame job={job} onComplete={onComplete} />;
@@ -220,3 +259,5 @@ function SequenceBuildGame({ job, onComplete }) {
     <div className="sequence-build-zone"><div className="robot-preview">{job.config.steps.slice(0, step).map((part) => part.icon).join(" ") || "🔧"}</div><div className="part-tray">{job.config.steps.map((part, index) => <button key={part.id} className={index < step ? "filled" : ""} onClick={() => { if (index === step) setStep((value) => value + 1); else setWrong((value) => value + 1); }}>{part.icon}<small>{part.label}</small></button>)}</div></div>
   </MiniFrame>;
 }
+
+

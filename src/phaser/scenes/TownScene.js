@@ -27,6 +27,10 @@ export class TownScene extends Phaser.Scene {
       frameWidth: 192,
       frameHeight: 192
     });
+    this.load.spritesheet("town-npcs", assetUrls.npcs, {
+      frameWidth: 64,
+      frameHeight: 96
+    });
     Object.entries(assetUrls.buildings).forEach(([key, url]) => {
       this.load.image(`building-${key}`, url);
     });
@@ -44,6 +48,7 @@ export class TownScene extends Phaser.Scene {
     this.renderTileMap();
     this.renderTownItems();
     places.forEach((place) => this.addPlace(place));
+    places.forEach((place) => this.addNpc(place));
     this.createPlayerAnimations();
     this.createPlayer();
 
@@ -97,6 +102,25 @@ export class TownScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(place.y + 2);
   }
 
+  addNpc(place) {
+    const npc = place.npc;
+    if (!npc) return;
+    const x = place.x + Math.min(96, place.w * 0.28);
+    const y = place.y + 18;
+    const shadow = this.add.ellipse(x, y + 24, 42, 14, 0x000000, 0.2).setDepth(y - 1);
+    const sprite = this.add.sprite(x, y - 18, "town-npcs", npc.sprite ?? 0);
+    sprite.setDisplaySize(64, 96);
+    sprite.setDepth(y + 1);
+    this.tweens.add({ targets: sprite, y: y - 21, duration: 900 + ((npc.sprite ?? 0) * 70), yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+    this.add.text(x, y + 42, npc.name, {
+      fontFamily: "Arial",
+      fontSize: "15px",
+      fontStyle: "bold",
+      color: "#fff8df",
+      stroke: "#4b3324",
+      strokeThickness: 4
+    }).setOrigin(0.5).setDepth(y + 2);
+  }
   createPlayer() {
     const state = this.bridge.getState();
     const character = state.playerCharacter ?? { icon: "😺" };
@@ -255,3 +279,5 @@ export class TownScene extends Phaser.Scene {
     ));
   }
 }
+
+

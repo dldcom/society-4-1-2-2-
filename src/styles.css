@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --ink: #3b2b24;
   --muted: #6d5d50;
   --paper: #fff6dc;
@@ -504,7 +504,7 @@ button:disabled {
   transform: translateX(-50%);
   background-image: url("./assets/buildings/building-spritesheet.png");
   background-repeat: no-repeat;
-  background-size: 500% 200%;
+  background-size: 500% 500%;
   background-position: var(--sprite-x) var(--sprite-y);
   image-rendering: pixelated;
   z-index: 0;
@@ -2541,5 +2541,390 @@ button:disabled {
 
   .activity-option {
     grid-template-columns: 42px minmax(0, 1fr);
+  }
+}
+
+/* NPC dialogue and concept quiz pass */
+.npc-dialog-modal {
+  width: min(760px, 94vw);
+}
+
+.npc-dialog-body {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr);
+  gap: 12px;
+  padding: 0 14px 12px;
+}
+
+.npc-portrait-card {
+  min-height: 132px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  border: 1px solid rgba(88, 69, 49, .2);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(255, 245, 209, .9), rgba(231, 219, 181, .78));
+  box-shadow: inset 0 -12px rgba(128, 94, 57, .08), 0 8px 22px rgba(75, 52, 34, .08);
+}
+
+.npc-portrait-card span {
+  font-size: 2.8rem;
+}
+
+.npc-portrait-card b {
+  max-width: 92px;
+  text-align: center;
+  font-size: .78rem;
+  color: #7d6048;
+}
+
+.npc-talk-panel {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.npc-line-main {
+  min-height: 64px;
+  margin: 0;
+  padding: 13px 14px;
+  border: 1px solid rgba(88, 69, 49, .2);
+  border-radius: 8px;
+  background: rgba(255, 252, 242, .82);
+  box-shadow: inset 0 1px rgba(255,255,255,.72);
+  color: #4d3b2d;
+  font-weight: 850;
+  line-height: 1.45;
+}
+
+.dialog-choice-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.dialog-choice-row button {
+  min-height: 40px;
+  padding: 0 12px;
+  font-size: .86rem;
+}
+
+.npc-activity-body {
+  padding-top: 0;
+}
+
+.npc-small-hint {
+  padding: 10px 12px;
+  border: 1px dashed rgba(88, 69, 49, .28);
+  border-radius: 8px;
+  background: rgba(255,255,255,.42);
+  color: #806a55;
+  font-size: .86rem;
+  font-weight: 800;
+}
+
+.concept-quiz-modal {
+  width: min(620px, 94vw);
+}
+
+.concept-body {
+  display: grid;
+  gap: 12px;
+  padding: 0 14px 14px;
+}
+
+.concept-question {
+  margin: 0;
+  padding: 16px;
+  border: 1px solid rgba(88, 69, 49, .2);
+  border-radius: 8px;
+  background: rgba(255, 252, 242, .88);
+  box-shadow: inset 0 1px rgba(255,255,255,.74), 0 8px 22px rgba(75, 52, 34, .08);
+  font-size: 1.04rem;
+  font-weight: 900;
+  line-height: 1.5;
+}
+
+.concept-choice-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.concept-choice {
+  min-height: 76px;
+  border: 2px solid rgba(83, 65, 49, .28);
+  border-radius: 8px;
+  box-shadow: 0 8px 22px rgba(75, 52, 34, .1), inset 0 1px rgba(255,255,255,.7);
+  font-size: 1.28rem;
+  font-weight: 950;
+}
+
+.concept-choice.production {
+  background: linear-gradient(180deg, #fff2b9, #f5cf68);
+}
+
+.concept-choice.consumption {
+  background: linear-gradient(180deg, #e9f4ff, #b8d6ef);
+}
+
+.concept-choice.selected {
+  outline: 4px solid rgba(255, 205, 73, .72);
+  transform: translateY(-1px);
+}
+
+.concept-feedback {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-weight: 850;
+  line-height: 1.45;
+}
+
+.concept-feedback.hint {
+  border: 1px solid rgba(191, 120, 64, .28);
+  background: rgba(255, 238, 206, .86);
+  color: #7d5535;
+}
+
+.concept-feedback.correct {
+  border: 1px solid rgba(77, 143, 94, .28);
+  background: rgba(226, 246, 223, .9);
+  color: #3d7048;
+}
+
+.concept-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.concept-actions button {
+  min-height: 40px;
+  padding: 0 18px;
+}
+
+@media (max-width: 680px) {
+  .npc-dialog-body,
+  .dialog-choice-row,
+  .concept-choice-row {
+    grid-template-columns: 1fr;
+  }
+
+  .npc-portrait-card {
+    min-height: 96px;
+  }
+}
+
+
+/* RPG-style bottom dialogue */
+.npc-rpg-overlay {
+  place-items: stretch;
+  padding: 0;
+  background: linear-gradient(180deg, rgba(24, 28, 22, .08), rgba(24, 20, 16, .34));
+  backdrop-filter: none;
+}
+
+.npc-rpg-layer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.npc-rpg-layer > * {
+  pointer-events: auto;
+}
+
+.npc-close-button {
+  position: absolute;
+  right: 18px;
+  bottom: 204px;
+  z-index: 32;
+  background: rgba(255, 239, 224, .92);
+}
+
+.npc-choice-panel {
+  position: absolute;
+  left: 50%;
+  bottom: 188px;
+  transform: translateX(-50%);
+  z-index: 31;
+  width: min(720px, calc(100vw - 32px));
+  border: 1px solid rgba(88, 69, 49, .26);
+  border-radius: 8px;
+  background: rgba(255, 249, 232, .94);
+  box-shadow: 0 14px 42px rgba(31, 25, 19, .22), inset 0 1px rgba(255,255,255,.76);
+  backdrop-filter: blur(8px) saturate(1.05);
+}
+
+.npc-choice-compact {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 10px;
+}
+
+.npc-choice-compact button {
+  min-height: 42px;
+  padding: 0 14px;
+  font-size: .9rem;
+}
+
+.npc-board-note {
+  grid-column: 1 / -1;
+  padding: 10px 12px;
+  font-size: .84rem;
+}
+
+.npc-activity-panel {
+  max-height: min(48vh, 430px);
+  overflow: auto;
+  padding: 10px;
+}
+
+.npc-panel-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin: -10px -10px 8px;
+  padding: 10px;
+  background: rgba(255, 249, 232, .96);
+  border-bottom: 1px solid rgba(88, 69, 49, .16);
+  font-weight: 950;
+}
+
+.npc-panel-head .ghost {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: .78rem;
+}
+
+.npc-bottom-dialog {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 30;
+  width: min(980px, calc(100vw - 32px));
+  min-height: 148px;
+  display: grid;
+  grid-template-columns: 106px minmax(0, 1fr);
+  gap: 14px;
+  padding: 14px;
+  border: 2px solid rgba(75, 56, 39, .46);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(255, 250, 235, .96), rgba(244, 231, 200, .94));
+  box-shadow: 0 18px 48px rgba(31, 25, 19, .28), inset 0 1px rgba(255,255,255,.8), inset 0 -10px rgba(128, 96, 62, .06);
+}
+
+.rpg-portrait {
+  width: 96px;
+  min-height: 112px;
+  border: 1px solid rgba(88, 69, 49, .24);
+  background: linear-gradient(180deg, #fff1be, #dfc48b);
+}
+
+.rpg-portrait span {
+  font-size: 3.2rem;
+}
+
+.npc-dialog-text {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+  align-content: start;
+}
+
+.npc-nameplate {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: rgba(94, 70, 48, .1);
+  color: #59412f;
+}
+
+.npc-nameplate b {
+  font-size: 1rem;
+}
+
+.npc-nameplate span {
+  color: #8b735e;
+  font-size: .76rem;
+  font-weight: 850;
+}
+
+.npc-dialog-text p {
+  margin: 0;
+  color: #47372d;
+  font-size: 1.03rem;
+  font-weight: 850;
+  line-height: 1.58;
+  word-break: keep-all;
+}
+
+.npc-activity-panel .activity-list {
+  gap: 8px;
+}
+
+.npc-activity-panel .activity-option {
+  grid-template-columns: 44px minmax(0, 1fr) 92px;
+  padding: 9px;
+}
+
+.npc-activity-panel .activity-option h3 {
+  font-size: .94rem;
+}
+
+.npc-activity-panel .activity-option p {
+  display: none;
+}
+
+.npc-activity-panel .activity-option small {
+  font-size: .72rem;
+}
+
+@media (max-width: 760px) {
+  .npc-close-button {
+    right: 12px;
+    bottom: 188px;
+  }
+
+  .npc-choice-panel {
+    bottom: 174px;
+    width: min(560px, calc(100vw - 20px));
+  }
+
+  .npc-choice-compact,
+  .npc-bottom-dialog {
+    grid-template-columns: 1fr;
+  }
+
+  .npc-bottom-dialog {
+    bottom: 10px;
+    min-height: 150px;
+    padding: 12px;
+  }
+
+  .rpg-portrait {
+    display: none;
+  }
+
+  .npc-dialog-text p {
+    font-size: .94rem;
+  }
+
+  .npc-activity-panel .activity-option {
+    grid-template-columns: 40px minmax(0, 1fr);
   }
 }
