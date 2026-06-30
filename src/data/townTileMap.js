@@ -1,4 +1,4 @@
-import tilesetData from "../assets/tilesets/cozy-town/tileset.json";
+﻿import tilesetData from "../assets/tilesets/cozy-town/tileset.json";
 
 export const cozyTownTileset = tilesetData;
 export const TILE_SIZE = 32;
@@ -15,12 +15,26 @@ export const collisionTileIds = new Set(
     .map((tile) => tile.id)
 );
 
+function tileNoise(col, row, salt = 0) {
+  let value = col * 374761393 + row * 668265263 + salt * 982451653;
+  value = (value ^ (value >> 13)) * 1274126177;
+  return Math.abs(value ^ (value >> 16));
+}
+
+function pickGrassTile(col, row) {
+  const roll = tileNoise(col, row) % 100;
+  if (roll < 50) return "grass_0";
+  if (roll < 76) return "grass_1";
+  if (roll < 93) return "grass_2";
+  if (roll < 96) return "grass_light";
+  if (roll < 98) return "grass_clover";
+  if (roll < 99) return "grass_flowers";
+  return "grass_tall";
+}
+
 function createGrid(cols = MAP_COLS, rows = MAP_ROWS) {
   return Array.from({ length: rows }, (_, row) => (
-    Array.from({ length: cols }, (_, col) => {
-      const variants = ["grass_0", "grass_1", "grass_2", "grass_light", "grass_dark"];
-      return variants[(col * 7 + row * 3) % variants.length];
-    })
+    Array.from({ length: cols }, (_, col) => pickGrassTile(col, row))
   ));
 }
 
@@ -156,3 +170,4 @@ export function buildTileCollisionAreas(map = townTileMap) {
   });
   return areas;
 }
+

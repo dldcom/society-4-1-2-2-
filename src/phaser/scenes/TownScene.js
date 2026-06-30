@@ -1,6 +1,6 @@
-import Phaser from "phaser";
+﻿import Phaser from "phaser";
 import { assetUrls } from "../assets.js";
-import { WORLD, collisions, findPlaceForMission, places } from "../../data/world.js";
+import { WORLD, collisions, places } from "../../data/world.js";
 import { buildItemCollisionAreas, buildTileCollisionAreas, tileLookup, townItems, townTileMap } from "../../data/townTileMap.js";
 
 const touchInput = { up: false, down: false, left: false, right: false };
@@ -14,8 +14,7 @@ export class TownScene extends Phaser.Scene {
     this.questMarker = null;
     this.itemCollisions = [];
     this.tileCollisions = [];
-    this.lastMissionId = "";
-    this.lastNear = false;
+    this.lastNearId = "";
     this.lastDir = "down";
   }
 
@@ -44,18 +43,18 @@ export class TownScene extends Phaser.Scene {
 
     this.renderTileMap();
     this.renderTownItems();
-
     places.forEach((place) => this.addPlace(place));
     this.createPlayerAnimations();
     this.createPlayer();
 
-    this.questMarker = this.add.text(0, 0, "!", {
+    this.questMarker = this.add.text(0, 0, "★", {
       fontFamily: "Arial",
-      fontSize: "42px",
+      fontSize: "38px",
       color: "#3b2b24",
       backgroundColor: "#ffd94f",
-      padding: { x: 12, y: 3 }
+      padding: { x: 10, y: 2 }
     }).setOrigin(0.5).setDepth(5000);
+    this.questMarker.setVisible(false);
 
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
     this.cameras.main.setZoom(1.05);
@@ -88,7 +87,7 @@ export class TownScene extends Phaser.Scene {
     sprite.setDisplaySize(place.w, place.w * 0.74);
     sprite.setDepth(place.y);
 
-    this.add.text(place.x, place.y + 20, place.name, {
+    this.add.text(place.x, place.y + 20, `${place.icon ?? ""} ${place.name}`, {
       fontFamily: "Arial",
       fontSize: "22px",
       fontStyle: "bold",
@@ -100,7 +99,7 @@ export class TownScene extends Phaser.Scene {
 
   createPlayer() {
     const state = this.bridge.getState();
-    const character = state.playerCharacter ?? state.character;
+    const character = state.playerCharacter ?? { icon: "😺" };
     this.player = this.add.container(WORLD.width * 0.5, WORLD.height * 0.58);
     const shadow = this.add.ellipse(0, 32, 58, 20, 0x000000, 0.22);
     this.playerSprite = this.add.sprite(0, -14, "player-cat", 0);
@@ -168,35 +167,44 @@ export class TownScene extends Phaser.Scene {
 
   update(_time, deltaMs) {
     const state = this.bridge.getState();
-    const mission = state.character.missions[state.missionIndex];
-    if (!mission) return;
-
-    const playerIcon = state.playerCharacter?.icon ?? state.character.icon;
-    if (this.playerIcon.text !== playerIcon) {
-      this.playerIcon.setText(playerIcon);
-    }
-
-    const target = findPlaceForMission(mission);
-    this.questMarker.setPosition(target.x, target.y - target.w * 0.58);
-
-    if (mission.id !== this.lastMissionId) {
-      this.lastMissionId = mission.id;
-      this.lastNear = false;
-      this.bridge.onNearChange(false);
-    }
+    const playerIcon = state.playerCharacter?.icon ?? "😺";
+    if (this.playerIcon.text !== playerIcon) this.playerIcon.setText(playerIcon);
 
     const movement = this.movePlayer(deltaMs);
     this.updatePlayerAnimation(movement);
     this.player.setDepth(this.player.y + 50);
 
-    const near = Phaser.Math.Distance.Between(this.player.x, this.player.y, target.x, target.y) < WORLD.interactionRadius;
-    if (near !== this.lastNear) {
-      this.lastNear = near;
-      this.bridge.onNearChange(near);
+    const nearPlace = this.findNearestActionPlace(state.actionPlaceIds ?? []);
+    const nearId = nearPlace?.id ?? "";
+    if (nearId !== this.lastNearId) {
+      this.lastNearId = nearId;
+      this.bridge.onNearChange(nearPlace ?? null);
     }
-    if (near && Phaser.Input.Keyboard.JustDown(this.keys.interact)) {
-      this.bridge.onInteract();
+
+    if (nearPlace) {
+      this.questMarker.setVisible(true);
+      this.questMarker.setPosition(nearPlace.x, nearPlace.y - nearPlace.w * 0.58);
+    } else {
+      this.questMarker.setVisible(false);
     }
+
+    if (nearPlace && Phaser.Input.Keyboard.JustDown(this.keys.interact)) {
+      this.bridge.onInteract(nearPlace);
+    }
+  }
+
+  findNearestActionPlace(actionPlaceIds) {
+    let best = null;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    places.forEach((place) => {
+      if (actionPlaceIds.length && !actionPlaceIds.includes(place.id)) return;
+      const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, place.x, place.y);
+      if (distance < WORLD.interactionRadius && distance < bestDistance) {
+        best = place;
+        bestDistance = distance;
+      }
+    });
+    return best;
   }
 
   movePlayer(deltaMs) {

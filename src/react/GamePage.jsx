@@ -1,28 +1,29 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
+import { activityPlaces, consumptions, jobs } from "../data/alba.js";
 import { createGame } from "../phaser/createGame.js";
+import { ActivityOverlay } from "./ActivityOverlay.jsx";
 import { PlacementEditor } from "./PlacementEditor.jsx";
-import { MissionOverlay } from "./MissionOverlay.jsx";
 
-export function GamePage({ playerCharacter, character, missionIndex, cards, onMissionComplete, onBackToMissions }) {
+export function GamePage({ playerCharacter, progress, canFinish, onCompleteJob, onBuyConsumption, onQuiz, onRestart }) {
   const hostRef = useRef(null);
   const gameRef = useRef(null);
-  const latestRef = useRef({ playerCharacter, character, missionIndex });
-  const [near, setNear] = useState(false);
-  const [activeMission, setActiveMission] = useState(null);
+  const latestRef = useRef({ playerCharacter, progress });
+  const [nearPlace, setNearPlace] = useState(null);
+  const [activePlace, setActivePlace] = useState(null);
   const [editorOpen, setEditorOpen] = useState(false);
 
-  latestRef.current = { playerCharacter, character, missionIndex };
-  const mission = character.missions[missionIndex];
+  latestRef.current = {
+    playerCharacter,
+    progress,
+    actionPlaceIds: activityPlaces.map((place) => place.id)
+  };
 
   useEffect(() => {
     if (!hostRef.current || gameRef.current) return;
     gameRef.current = createGame(hostRef.current, {
       getState: () => latestRef.current,
-      onNearChange: setNear,
-      onInteract: () => {
-        const { character: c, missionIndex: i } = latestRef.current;
-        setActiveMission(c.missions[i]);
-      }
+      onNearChange: setNearPlace,
+      onInteract: (place) => setActivePlace(place)
     });
     return () => {
       gameRef.current?.destroy(true);
@@ -30,57 +31,66 @@ export function GamePage({ playerCharacter, character, missionIndex, cards, onMi
     };
   }, []);
 
-  useEffect(() => {
-    setNear(false);
-    setActiveMission(null);
-  }, [missionIndex, character.id]);
+  const todoText = useMemo(() => {
+    const remainingJobs = jobs.length - progress.completedJobs.length;
+    const remainingConsumptions = consumptions.length - progress.completedConsumptions.length;
+    return `알바 ${remainingJobs} · 소비 ${remainingConsumptions}`;
+  }, [progress.completedJobs.length, progress.completedConsumptions.length]);
 
-  const progressText = useMemo(() => `${Math.min(missionIndex + 1, character.missions.length)} / ${character.missions.length}`, [missionIndex, character.missions.length]);
+  const recentCards = progress.cards.slice(-3);
 
   return (
-    <section className="game-shell">
+    <section className="game-shell indie-shell">
       <div className="phaser-host" ref={hostRef} />
-      <aside className="game-hud">
-        <div className="hud-title">
-          <div className="avatar-chip">{playerCharacter.icon}</div>
-          <div>
-            <p>{playerCharacter.name}의 미션</p>
-            <strong>{mission?.title ?? "퀴즈로 이동"}</strong>
+
+      <aside className="game-hud alba-hud indie-hud" aria-label="상태창">
+        <div className="indie-hud-top">
+          <div className="avatar-chip indie-avatar">{playerCharacter.icon}</div>
+          <div className="indie-title">
+            <p>내일은 알바왕!</p>
+            <strong>{todoText}</strong>
           </div>
         </div>
-        <div className="mission-strip">
-          {character.missions.map((item, index) => (
-            <span key={item.id} className={index < missionIndex ? "done" : index === missionIndex ? "now" : ""}>{index + 1}</span>
-          ))}
+
+        <div className="status-grid indie-status-grid">
+          <div><span>코인</span><b>{progress.coins}</b></div>
+          <div><span>체력</span><b>{progress.energy}/{progress.maxEnergy}</b></div>
+          <div><span>카드</span><b>{progress.cards.length}</b></div>
         </div>
-        <p className="npc-line"><b>{character.npc}</b><br />{mission ? `다음 장소: ${mission.place}` : "활동을 정리해 볼까요?"}</p>
-        <p className="npc-line"><b>선택 미션</b><br />{character.icon} {character.name}</p>
-        <p className="npc-line">진행: {progressText}</p>
-        <div className="card-stack">
-          {cards.length ? cards.map((card) => <div className={`tiny-card ${card.type}`} key={card.id}>{card.badge} {card.title}</div>) : <div className="empty-note">아직 모은 카드가 없어요.</div>}
+
+        <div className="indie-card-peek" aria-label="최근 활동 카드">
+          {recentCards.length ? recentCards.map((card) => (
+            <span className={`mini-card-dot ${card.type}`} key={card.id} title={card.title}>{card.badge}</span>
+          )) : <span className="indie-empty">첫 알바를 찾아봐요</span>}
         </div>
-        <button className="secondary" onClick={() => setEditorOpen(true)}>건물 위치 조정</button>
-        <button className="ghost" onClick={onBackToMissions}>미션 선택</button>
+
+        <div className="indie-actions">
+          <button className="primary" disabled={!canFinish} onClick={onQuiz}>퀴즈</button>
+          <button className="secondary" onClick={() => setEditorOpen(true)}>맵</button>
+          <button className="ghost" onClick={onRestart}>처음</button>
+        </div>
       </aside>
-      <div className="mission-prompt">
-        {near ? <><b>{character.npc}</b> 도착했어요. 스페이스키나 시작 버튼을 눌러요.</> : <>반짝이는 느낌표가 있는 <b>{mission?.place}</b>로 이동해요.</>}
-        <button className="primary" disabled={!near} onClick={() => setActiveMission(mission)}>미션 시작</button>
+
+      <div className="mission-prompt alba-prompt indie-prompt">
+        <span>{nearPlace ? <><b>{nearPlace.icon ?? "📍"} {nearPlace.name}</b>에서 할 일을 볼 수 있어요.</> : <>반짝이는 장소 가까이 가 볼까요?</>}</span>
+        <button className="primary" disabled={!nearPlace} onClick={() => setActivePlace(nearPlace)}>시작</button>
       </div>
+
       <TouchControls />
-      {activeMission && (
-        <MissionOverlay
-          mission={activeMission}
-          onClose={() => setActiveMission(null)}
-          onComplete={() => {
-            setActiveMission(null);
-            onMissionComplete(activeMission);
-          }}
+      {activePlace && (
+        <ActivityOverlay
+          place={activePlace}
+          progress={progress}
+          onClose={() => setActivePlace(null)}
+          onCompleteJob={onCompleteJob}
+          onBuyConsumption={onBuyConsumption}
         />
       )}
       {editorOpen && <PlacementEditor onClose={() => setEditorOpen(false)} />}
     </section>
   );
 }
+
 function TouchControls() {
   const send = (dir, pressed) => {
     window.dispatchEvent(new CustomEvent("town-control", { detail: { dir, pressed } }));
@@ -98,11 +108,11 @@ function TouchControls() {
     onPointerLeave: () => send(dir, false)
   });
   return (
-    <div className="dpad" aria-label="이동 버튼">
-      <button {...bind("up")}>▲</button>
-      <button {...bind("left")}>◀</button>
-      <button {...bind("down")}>▼</button>
-      <button {...bind("right")}>▶</button>
+    <div className="dpad indie-dpad" aria-label="이동 버튼">
+      <button {...bind("up")}>↑</button>
+      <button {...bind("left")}>←</button>
+      <button {...bind("down")}>↓</button>
+      <button {...bind("right")}>→</button>
     </div>
   );
 }

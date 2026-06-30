@@ -1,26 +1,24 @@
-export const WORLD = {
+﻿export const WORLD = {
   width: 3200,
   height: 1792,
   playerSpeed: 230,
-  interactionRadius: 135
+  interactionRadius: 150
 };
 
-export const PLACE_OVERRIDE_KEY = "society-town-place-overrides-v1";
-export const BLOCKED_AREA_KEY = "society-town-blocked-areas-v1";
+export const PLACE_OVERRIDE_KEY = "alba-town-place-overrides-v1";
+export const BLOCKED_AREA_KEY = "alba-town-blocked-areas-v1";
 
 export const defaultPlaces = [
-  // Coordinates are building foot anchors, not image centers.
-  // Buildings use origin (0.5, 1), so the sprite bottom center sits on the dirt pad.
-  { id: "stationery", name: "문구점", x: 990, y: 680, w: 300, building: "stationery-shop" },
-  { id: "school", name: "학교", x: 1600, y: 705, w: 330, building: "school" },
-  { id: "bakery", name: "빵집", x: 2485, y: 695, w: 300, building: "bakery" },
-  { id: "parcel", name: "택배센터", x: 820, y: 1190, w: 330, building: "parcel-center" },
-  { id: "stage", name: "공연장", x: 2360, y: 1210, w: 330, building: "theater" },
-  { id: "store", name: "편의점", x: 805, y: 1660, w: 310, building: "convenience-store" },
-  { id: "hair", name: "미용실", x: 1575, y: 1625, w: 305, building: "hair-salon" },
-  { id: "cafeteria", name: "급식실", x: 2415, y: 1650, w: 305, building: "cafeteria" },
-  { id: "bus", name: "버스정류장", x: 3000, y: 1085, w: 185, building: "bus-stop" },
-  { id: "pack", name: "포장실", x: 1600, y: 1020, w: 240, building: "packing-room" }
+  { id: "board", name: "알바 게시판", x: 1600, y: 1030, w: 230, building: "packing-room", icon: "📋" },
+  { id: "pizza-shop", name: "피자집", x: 2485, y: 695, w: 300, building: "bakery", icon: "🍕" },
+  { id: "icecream-shop", name: "아이스크림", x: 2415, y: 1650, w: 305, building: "cafeteria", icon: "🍦" },
+  { id: "pet-cafe", name: "펫카페", x: 990, y: 680, w: 300, building: "stationery-shop", icon: "🐾" },
+  { id: "game-center", name: "게임센터", x: 805, y: 1660, w: 310, building: "convenience-store", icon: "🕹️" },
+  { id: "stage", name: "공연장", x: 2360, y: 1210, w: 330, building: "theater", icon: "🎤" },
+  { id: "outfit-shop", name: "옷가게", x: 1575, y: 1625, w: 305, building: "hair-salon", icon: "⭐" },
+  { id: "bakery", name: "빵집", x: 820, y: 1190, w: 330, building: "parcel-center", icon: "🥐" },
+  { id: "plaza", name: "광장", x: 1600, y: 705, w: 330, building: "school", icon: "🏛️" },
+  { id: "photo-studio", name: "사진관", x: 3000, y: 1085, w: 185, building: "bus-stop", icon: "📸" }
 ];
 
 export const defaultBlockedAreas = [];
@@ -86,17 +84,11 @@ export const collisions = [
   ...blockedAreas.map((area) => ({ ...area, id: `blocked-${area.id}` }))
 ];
 
-export function findPlaceForMission(mission, placeList = places) {
-  const direct = placeList.find((place) => mission.place.includes(place.name) || place.name.includes(mission.place));
-  if (direct) return direct;
-  if (mission.place.includes("포장")) return placeList.find((place) => place.id === "pack");
-  if (mission.place.includes("무대") || mission.place.includes("공연")) return placeList.find((place) => place.id === "stage");
-  if (mission.place.includes("미용")) return placeList.find((place) => place.id === "hair");
-  if (mission.place.includes("버스") || mission.place.includes("정류장")) return placeList.find((place) => place.id === "bus");
-  if (mission.place.includes("편의점")) return placeList.find((place) => place.id === "store");
-  if (mission.place.includes("택배") || mission.place.includes("골목") || mission.place.includes("집")) return placeList.find((place) => place.id === "parcel");
-  if (mission.place.includes("빵") || mission.place.includes("오븐") || mission.place.includes("재료")) return placeList.find((place) => place.id === "bakery");
-  if (mission.place.includes("문구") || mission.place.includes("정리")) return placeList.find((place) => place.id === "stationery");
-  if (mission.place.includes("급식") || mission.place.includes("우유")) return placeList.find((place) => place.id === "cafeteria");
-  return placeList[0];
+export function findPlaceById(placeId, placeList = places) {
+  return placeList.find((place) => place.id === placeId) ?? placeList[0];
 }
+
+export function findPlaceForMission(mission, placeList = places) {
+  return findPlaceById(mission?.placeId, placeList);
+}
+
