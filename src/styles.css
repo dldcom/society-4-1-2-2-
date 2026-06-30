@@ -1225,6 +1225,10 @@ button:disabled {
   filter: saturate(1.25);
 }
 
+.mini-stage button.bad {
+  background: #ffe3d9;
+}
+
 .placement-editor {
   position: fixed;
   inset: 0;

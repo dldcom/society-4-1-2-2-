@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { assetUrls } from "../assets.js";
 import { WORLD, collisions, findPlaceForMission, places } from "../../data/world.js";
+import { buildItemCollisionAreas, buildTileCollisionAreas, tileLookup, townItems, townTileMap } from "../../data/townTileMap.js";
 
 const touchInput = { up: false, down: false, left: false, right: false };
 
@@ -8,27 +9,44 @@ export class TownScene extends Phaser.Scene {
   constructor() {
     super("TownScene");
     this.player = null;
+    this.playerSprite = null;
     this.playerIcon = null;
     this.questMarker = null;
+    this.itemCollisions = [];
+    this.tileCollisions = [];
     this.lastMissionId = "";
     this.lastNear = false;
+    this.lastDir = "down";
   }
 
   preload() {
-    this.load.image("town-map", assetUrls.map);
+    this.load.spritesheet("cozy-town-tileset", assetUrls.tilesets.cozyTown, {
+      frameWidth: 32,
+      frameHeight: 32
+    });
+    this.load.spritesheet("player-cat", assetUrls.player, {
+      frameWidth: 192,
+      frameHeight: 192
+    });
     Object.entries(assetUrls.buildings).forEach(([key, url]) => {
       this.load.image(`building-${key}`, url);
+    });
+    Object.entries(assetUrls.townItems).forEach(([key, url]) => {
+      this.load.image(`town-item-${key}`, url);
     });
   }
 
   create() {
     this.bridge = this.game.registry.get("bridge");
     this.cameras.main.setBounds(0, 0, WORLD.width, WORLD.height);
+    this.itemCollisions = buildItemCollisionAreas();
+    this.tileCollisions = buildTileCollisionAreas();
 
-    const map = this.add.image(0, 0, "town-map").setOrigin(0);
-    map.setDisplaySize(WORLD.width, WORLD.height);
+    this.renderTileMap();
+    this.renderTownItems();
 
     places.forEach((place) => this.addPlace(place));
+    this.createPlayerAnimations();
     this.createPlayer();
 
     this.questMarker = this.add.text(0, 0, "!", {
@@ -84,14 +102,68 @@ export class TownScene extends Phaser.Scene {
     const state = this.bridge.getState();
     const character = state.playerCharacter ?? state.character;
     this.player = this.add.container(WORLD.width * 0.5, WORLD.height * 0.58);
-    const shadow = this.add.ellipse(0, 24, 58, 22, 0x000000, 0.22);
-    const body = this.add.rectangle(0, 0, 56, 64, 0xfff3c4, 1).setStrokeStyle(4, 0x4b3324);
-    this.playerIcon = this.add.text(0, -4, character.icon, {
+    const shadow = this.add.ellipse(0, 32, 58, 20, 0x000000, 0.22);
+    this.playerSprite = this.add.sprite(0, -14, "player-cat", 0);
+    this.playerSprite.setDisplaySize(104, 104);
+    this.playerIcon = this.add.text(34, -46, character.icon, {
       fontFamily: "Arial",
-      fontSize: "32px"
-    }).setOrigin(0.5);
-    this.player.add([shadow, body, this.playerIcon]);
+      fontSize: "20px",
+      backgroundColor: "#fff8df",
+      padding: { x: 5, y: 2 }
+    }).setOrigin(0.5).setDepth(2);
+    this.player.add([shadow, this.playerSprite, this.playerIcon]);
     this.player.setDepth(3000);
+  }
+
+  renderTileMap() {
+    const tileSize = townTileMap.tileSize;
+    const scaleX = WORLD.width / (townTileMap.cols * tileSize);
+    const scaleY = WORLD.height / (townTileMap.rows * tileSize);
+    const scale = Math.min(scaleX, scaleY);
+    const offsetX = (WORLD.width - townTileMap.cols * tileSize * scale) / 2;
+    const offsetY = (WORLD.height - townTileMap.rows * tileSize * scale) / 2;
+    const layer = townTileMap.layers.find((item) => item.id === "ground");
+    if (!layer) return;
+
+    layer.data.forEach((row, rowIndex) => {
+      row.forEach((tileId, colIndex) => {
+        const tile = tileLookup[tileId];
+        if (!tile) return;
+        const sprite = this.add.image(
+          offsetX + (colIndex + 0.5) * tileSize * scale,
+          offsetY + (rowIndex + 0.5) * tileSize * scale,
+          "cozy-town-tileset",
+          tile.index
+        );
+        sprite.setDisplaySize(tileSize * scale, tileSize * scale);
+        sprite.setDepth(0);
+      });
+    });
+  }
+
+  renderTownItems() {
+    townItems.forEach((item) => {
+      const sprite = this.add.image(item.x, item.y, `town-item-${item.itemId}`);
+      sprite.setOrigin(0.5, 1);
+      sprite.setDisplaySize(item.w, item.h);
+      sprite.setDepth(item.y);
+    });
+  }
+
+  createPlayerAnimations() {
+    const create = (key, start, end) => {
+      if (this.anims.exists(key)) return;
+      this.anims.create({
+        key,
+        frames: this.anims.generateFrameNumbers("player-cat", { start, end }),
+        frameRate: 7,
+        repeat: -1
+      });
+    };
+    create("cat-walk-down", 0, 3);
+    create("cat-walk-left", 4, 7);
+    create("cat-walk-right", 8, 11);
+    create("cat-walk-up", 12, 15);
   }
 
   update(_time, deltaMs) {
@@ -113,7 +185,8 @@ export class TownScene extends Phaser.Scene {
       this.bridge.onNearChange(false);
     }
 
-    this.movePlayer(deltaMs);
+    const movement = this.movePlayer(deltaMs);
+    this.updatePlayerAnimation(movement);
     this.player.setDepth(this.player.y + 50);
 
     const near = Phaser.Math.Distance.Between(this.player.x, this.player.y, target.x, target.y) < WORLD.interactionRadius;
@@ -133,20 +206,40 @@ export class TownScene extends Phaser.Scene {
     if (this.keys.down.isDown || this.keys.arrowDown.isDown || touchInput.down) dy += 1;
     if (this.keys.left.isDown || this.keys.arrowLeft.isDown || touchInput.left) dx -= 1;
     if (this.keys.right.isDown || this.keys.arrowRight.isDown || touchInput.right) dx += 1;
-    if (!dx && !dy) return;
+    if (!dx && !dy) return null;
 
     const length = Math.hypot(dx, dy);
     const speed = WORLD.playerSpeed * (deltaMs / 1000);
     const nextX = Phaser.Math.Clamp(this.player.x + (dx / length) * speed, 48, WORLD.width - 48);
     const nextY = Phaser.Math.Clamp(this.player.y + (dy / length) * speed, 64, WORLD.height - 48);
+    const dir = Math.abs(dx) > Math.abs(dy)
+      ? (dx < 0 ? "left" : "right")
+      : (dy < 0 ? "up" : "down");
 
     if (!this.collides(nextX, nextY)) {
       this.player.setPosition(nextX, nextY);
+      return dir;
+    }
+    return null;
+  }
+
+  updatePlayerAnimation(dir) {
+    if (!this.playerSprite) return;
+    if (!dir) {
+      this.playerSprite.anims.stop();
+      const idleFrame = { down: 0, left: 4, right: 8, up: 12 }[this.lastDir] ?? 0;
+      this.playerSprite.setFrame(idleFrame);
+      return;
+    }
+    this.lastDir = dir;
+    const key = `cat-walk-${dir}`;
+    if (this.playerSprite.anims.currentAnim?.key !== key) {
+      this.playerSprite.play(key, true);
     }
   }
 
   collides(x, y) {
-    return collisions.some((rect) => (
+    return [...collisions, ...this.tileCollisions, ...this.itemCollisions].some((rect) => (
       x > rect.x - rect.w / 2 &&
       x < rect.x + rect.w / 2 &&
       y > rect.y - rect.h / 2 &&

@@ -1,6 +1,6 @@
 export const WORLD = {
   width: 3200,
-  height: 1800,
+  height: 1792,
   playerSpeed: 230,
   interactionRadius: 135
 };

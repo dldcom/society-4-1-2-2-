@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createGame } from "../phaser/createGame.js";
 import { PlacementEditor } from "./PlacementEditor.jsx";
+import { MissionOverlay } from "./MissionOverlay.jsx";
 
 export function GamePage({ playerCharacter, character, missionIndex, cards, onMissionComplete, onBackToMissions }) {
   const hostRef = useRef(null);
@@ -80,7 +81,6 @@ export function GamePage({ playerCharacter, character, missionIndex, cards, onMi
     </section>
   );
 }
-
 function TouchControls() {
   const send = (dir, pressed) => {
     window.dispatchEvent(new CustomEvent("town-control", { detail: { dir, pressed } }));
@@ -103,49 +103,6 @@ function TouchControls() {
       <button {...bind("left")}>◀</button>
       <button {...bind("down")}>▼</button>
       <button {...bind("right")}>▶</button>
-    </div>
-  );
-}
-
-function MissionOverlay({ mission, onClose, onComplete }) {
-  const [progress, setProgress] = useState(0);
-  const total = mission.game === "delivery" ? 8 : 6;
-  const clickLabel = mission.game === "scene" ? "장면 확인하기" : mission.game === "delivery" ? "앞으로 이동하기" : "미션 수행하기";
-  const done = progress >= total;
-
-  return (
-    <div className="overlay">
-      <div className="modal game-modal">
-        <div className="game-head">
-          <div>
-            <p className="eyebrow">{mission.place}</p>
-            <h2>{mission.title}</h2>
-          </div>
-          <button className="icon-button" onClick={onClose}>×</button>
-        </div>
-        <div className="game-body">
-          <div className={`phaser-like-minigame ${mission.game}`}>
-            <div className="mini-stage">
-              {Array.from({ length: total }).map((_, index) => (
-                <button
-                  key={index}
-                  className={index < progress ? "hit" : ""}
-                  onClick={() => setProgress((value) => Math.min(total, value + 1))}
-                >
-                  {mission.badge}
-                </button>
-              ))}
-            </div>
-            <div className="progress"><span style={{ width: `${(progress / total) * 100}%` }} /></div>
-            <p>{mission.feedback}</p>
-            {done ? (
-              <button className="primary" onClick={onComplete}>{mission.type === "production" ? "생산" : "소비"} 활동 카드 받기</button>
-            ) : (
-              <button className="secondary" onClick={() => setProgress((value) => Math.min(total, value + 1))}>{clickLabel}</button>
-            )}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
