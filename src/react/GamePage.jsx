@@ -11,13 +11,14 @@ export function GamePage({ playerCharacter, progress, canFinish, inputLocked = f
   const [nearPlace, setNearPlace] = useState(null);
   const [activePlace, setActivePlace] = useState(null);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [cardBookOpen, setCardBookOpen] = useState(false);
 
   latestRef.current = {
     playerCharacter,
     progress,
     actionPlaceIds: activityPlaces.map((place) => place.id),
     activePlaceId: activePlace?.id ?? null,
-    inputLocked: inputLocked || Boolean(activePlace) || editorOpen
+    inputLocked: inputLocked || Boolean(activePlace) || editorOpen || cardBookOpen
   };
 
   useEffect(() => {
@@ -40,6 +41,8 @@ export function GamePage({ playerCharacter, progress, canFinish, inputLocked = f
   }, [progress.completedJobs.length, progress.completedConsumptions.length]);
 
   const recentCards = progress.cards.slice(-3);
+  const productionCards = progress.cards.filter((card) => card.type === "production");
+  const consumptionCards = progress.cards.filter((card) => card.type === "consumption");
 
   return (
     <section className="game-shell indie-shell">
@@ -57,7 +60,9 @@ export function GamePage({ playerCharacter, progress, canFinish, inputLocked = f
         <div className="status-grid indie-status-grid">
           <div><span>코인</span><b>{progress.coins}</b></div>
           <div><span>체력</span><b>{progress.energy}/{progress.maxEnergy}</b></div>
-          <div><span>카드</span><b>{progress.cards.length}</b></div>
+          <button className="hud-card-button" onClick={() => setCardBookOpen(true)}>
+            <span>카드</span><b>{progress.cards.length}</b>
+          </button>
         </div>
 
         <div className="indie-card-peek" aria-label="최근 활동 카드">
@@ -79,6 +84,13 @@ export function GamePage({ playerCharacter, progress, canFinish, inputLocked = f
       </div>
 
       <TouchControls />
+      {cardBookOpen && (
+        <CardBook
+          productionCards={productionCards}
+          consumptionCards={consumptionCards}
+          onClose={() => setCardBookOpen(false)}
+        />
+      )}
       {activePlace && (
         <ActivityOverlay
           place={activePlace}
@@ -90,6 +102,63 @@ export function GamePage({ playerCharacter, progress, canFinish, inputLocked = f
       )}
       {editorOpen && <PlacementEditor onClose={() => setEditorOpen(false)} />}
     </section>
+  );
+}
+
+function CardBook({ productionCards, consumptionCards, onClose }) {
+  return (
+    <div className="card-book-overlay" role="dialog" aria-modal="true" aria-label="활동 카드함">
+      <section className="card-book-panel">
+        <div className="card-book-head">
+          <div>
+            <p className="eyebrow">내가 모은 활동 카드</p>
+            <h2>생산과 소비 기록</h2>
+          </div>
+          <button className="icon-button" onClick={onClose}>X</button>
+        </div>
+
+        <div className="card-book-columns">
+          <CardBookColumn
+            title="생산"
+            count={productionCards.length}
+            hint="알바를 해서 물건이나 서비스를 만들고 준비한 활동"
+            cards={productionCards}
+            empty="아직 생산 카드가 없어요. 알바를 해 보면 여기에 기록돼요."
+          />
+          <CardBookColumn
+            title="소비"
+            count={consumptionCards.length}
+            hint="코인을 써서 물건이나 서비스를 이용한 활동"
+            cards={consumptionCards}
+            empty="아직 소비 카드가 없어요. 번 코인으로 물건이나 서비스를 이용해 봐요."
+          />
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function CardBookColumn({ title, count, hint, cards, empty }) {
+  return (
+    <article className={`card-book-column ${title === "소비" ? "consumption" : "production"}`}>
+      <div className="card-book-column-head">
+        <b>{title}</b>
+        <span>{count}장</span>
+      </div>
+      <p>{hint}</p>
+      <div className="card-book-list">
+        {cards.length ? cards.map((card) => (
+          <section className="learning-card" key={card.id}>
+            <div className="learning-card-badge">{card.badge}</div>
+            <div>
+              <h3>{card.title}</h3>
+              <strong>{card.description}</strong>
+              <p>{card.feedback}</p>
+            </div>
+          </section>
+        )) : <div className="card-book-empty">{empty}</div>}
+      </div>
+    </article>
   );
 }
 

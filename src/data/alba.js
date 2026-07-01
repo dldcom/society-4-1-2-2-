@@ -76,13 +76,22 @@ export const jobs = [
     shortTitle: "피자 토핑",
     npc: "피자집 사장님",
     icon: "🍕",
-    engine: "orderCraft",
+    engine: "pizzaCraft",
     rewardCoins: 300,
     energyCost: 1,
     goal: "주문 카드를 기억하고 토핑을 순서대로 올려요.",
     productionText: "피자를 만들어 손님이 먹을 수 있게 준비하는 일은 생산 활동이에요.",
     card: { id: "card-pizza-job", type: "production", badge: "🍕", title: "피자 만들기 알바", description: "주문에 맞게 피자를 만든 생산 활동", feedback: "사람들이 먹을 음식을 만드는 일은 생산 활동이에요." },
-    config: { base: "🍕", revealMs: 2600, choices: ["🧀", "🍄", "🫒", "🌽", "🍅"], order: ["🧀", "🍄", "🫒", "🌽"] }
+    config: {
+      base: "🍕",
+      revealMs: 3000,
+      choices: ["🧀", "🍄", "🫒", "🌽", "🍅", "🥓", "🌿", "🧅"],
+      orders: [
+        ["🧀", "🍄", "🍅", "🥓"],
+        ["🌽", "🫒", "🧀", "🌿"],
+        ["🍅", "🧅", "🍄", "🥓"]
+      ]
+    }
   },
   {
     id: "icecream-job",
@@ -91,13 +100,20 @@ export const jobs = [
     shortTitle: "아이스크림 만들기",
     npc: "아이스크림 가게 주인",
     icon: "🍦",
-    engine: "orderCraft",
+    engine: "icecreamStack",
     rewardCoins: 280,
     energyCost: 1,
-    goal: "주문을 외워 콘, 맛, 토핑을 차례대로 골라요.",
+    goal: "손님 주문에 맞게 아이스크림을 차례대로 쌓아요.",
     productionText: "손님이 먹을 아이스크림을 만드는 일은 생산 활동이에요.",
     card: { id: "card-icecream-job", type: "production", badge: "🍦", title: "아이스크림 만들기 알바", description: "주문에 맞게 아이스크림을 만든 생산 활동", feedback: "음식을 만들어 손님에게 제공하는 일은 생산 활동이에요." },
-    config: { base: "🥄", revealMs: 2200, choices: ["🍦", "🍓", "🍫", "🍪", "🍒"], order: ["🍦", "🍓", "🍪"] }
+    config: {
+      choices: ["🍦", "🥄", "🍨", "🍓", "🍫", "🍪", "🍒", "🍯"],
+      orders: [
+        ["🍦", "🍨", "🍓", "🍒"],
+        ["🥄", "🍫", "🍨", "🍪"],
+        ["🍦", "🍓", "🍫", "🍯"]
+      ]
+    }
   },
   {
     id: "pet-job",
@@ -109,43 +125,27 @@ export const jobs = [
     engine: "careGauge",
     rewardCoins: 260,
     energyCost: 1,
-    goal: "강아지와 고양이가 원하는 도구를 번갈아 골라 만족도를 채워요.",
+    goal: "동물 말풍선에 뜬 요구를 보고 알맞은 아이콘을 드래그해 돌봐요.",
     productionText: "손님과 동물이 편하게 지내도록 돕는 서비스도 생산 활동이에요.",
     card: { id: "card-pet-job", type: "production", badge: "🐾", title: "펫카페 돌봄 알바", description: "동물을 돌보고 손님을 돕는 생산 활동", feedback: "서비스를 제공해 사람들이 이용할 수 있게 하는 일도 생산 활동이에요." },
     config: {
       pets: [
-        { id: "dog", icon: "🐕", name: "강아지", needs: ["간식", "물", "장난감"] },
-        { id: "cat", icon: "🐈", name: "고양이", needs: ["빗", "간식", "물"] }
+        { id: "dog", asset: "pet-dog", icon: "🐕", name: "코기", needs: ["snack", "toy", "water"] },
+        { id: "cat", asset: "pet-cat", icon: "🐈", name: "태비", needs: ["brush", "cuddle", "snack"] },
+        { id: "rabbit", asset: "pet-rabbit", icon: "🐇", name: "토끼", needs: ["water", "bed", "cuddle"] },
+        { id: "puppy", asset: "pet-puppy", icon: "🐶", name: "푸들", needs: ["bath", "toy", "photo"] }
       ],
+      targetCare: 10,
       tools: [
         { id: "snack", label: "간식", icon: "🦴" },
         { id: "water", label: "물", icon: "🥣" },
         { id: "brush", label: "빗", icon: "🪮" },
-        { id: "toy", label: "장난감", icon: "🧸" }
+        { id: "toy", label: "장난감", icon: "🧸" },
+        { id: "cuddle", label: "쓰담", icon: "💗" },
+        { id: "bath", label: "목욕", icon: "🫧" },
+        { id: "bed", label: "휴식", icon: "🛏️" },
+        { id: "photo", label: "사진", icon: "📷" }
       ]
-    }
-  },
-  {
-    id: "arcade-job",
-    placeId: "game-center",
-    title: "게임센터 스태프 알바",
-    shortTitle: "전선 연결 수리",
-    npc: "게임센터 사장님",
-    icon: "🕹️",
-    engine: "wirePuzzle",
-    rewardCoins: 320,
-    energyCost: 1,
-    goal: "같은 색 단자를 연결하고 빠진 부품까지 끼워 게임기를 켜요.",
-    productionText: "손님이 게임을 즐길 수 있도록 기계를 고치는 일은 생산 활동이에요.",
-    card: { id: "card-arcade-job", type: "production", badge: "🕹️", title: "게임기 수리 알바", description: "고장 난 게임기를 고친 생산 활동", feedback: "서비스가 제대로 제공되도록 준비하고 고치는 일은 생산 활동이에요." },
-    config: {
-      gridSize: 5,
-      wires: [
-        { color: "red", start: [0, 0], end: [4, 4] },
-        { color: "blue", start: [0, 4], end: [3, 1] },
-        { color: "yellow", start: [1, 1], end: [2, 3] }
-      ],
-      parts: [{ id: "button", label: "버튼", icon: "🔴" }, { id: "lever", label: "레버", icon: "🕹️" }]
     }
   },
   {
@@ -175,34 +175,53 @@ export const jobs = [
     }
   },
   {
-    id: "photo-job",
-    placeId: "photo-studio",
-    title: "사진관 촬영 알바",
-    shortTitle: "사진 촬영",
-    npc: "사진관 주인",
-    icon: "📸",
-    engine: "photoTiming",
-    rewardCoins: 260,
-    energyCost: 1,
-    goal: "손님이 웃는 순간에 셔터를 눌러 선명한 사진을 찍어요.",
-    productionText: "손님에게 사진 서비스를 제공하는 일은 생산 활동이에요.",
-    card: { id: "card-photo-job", type: "production", badge: "📸", title: "사진 촬영 알바", description: "손님 사진을 찍어 준 생산 활동", feedback: "돈을 받고 사진 서비스를 제공하는 일은 생산 활동이에요." },
-    config: { poses: ["🙂", "😐", "😁", "😉", "😁"] }
-  },
-  {
     id: "delivery-job",
-    placeId: "bakery",
-    title: "동네 배달 알바",
-    shortTitle: "길찾기 배달",
-    npc: "빵집 주인",
-    icon: "🚲",
-    engine: "deliveryGrid",
+    placeId: "game-center",
+    title: "택배 분류 컨베이어 알바",
+    shortTitle: "택배 분류",
+    npc: "택배센터 직원",
+    icon: "📦",
+    engine: "conveyorSort",
     rewardCoins: 280,
     energyCost: 1,
-    goal: "장애물을 피해 목적지까지 가장 짧은 길로 배달해요.",
-    productionText: "사람들이 물건을 받을 수 있게 배달하는 일은 생산 활동이에요.",
-    card: { id: "card-delivery-job", type: "production", badge: "🚲", title: "동네 배달 알바", description: "물건을 목적지까지 배달한 생산 활동", feedback: "물건을 필요한 곳까지 옮기는 서비스도 생산 활동이에요." },
-    config: { cols: 6, rows: 5, start: [0, 4], goal: [5, 0], blocks: [[2, 4], [2, 3], [2, 1], [4, 2], [1, 1]] }
+    goal: "상자가 중앙 분기점에 올 때 목적지에 맞는 방향을 눌러 분류해요.",
+    productionText: "택배를 주소에 맞게 분류하면 사람들이 물건을 받을 수 있어요. 분류와 운반을 돕는 일도 생산 활동이에요.",
+    card: { id: "card-delivery-job", type: "production", badge: "📦", title: "택배 분류 알바", description: "주소에 맞게 택배를 분류한 생산 활동", feedback: "물건이 필요한 사람에게 도착하도록 나누고 보내는 일도 생산 활동이에요." },
+    config: {
+      targetHits: 8,
+      beatMs: 1120,
+      travelMs: 1800,
+      hitWindowMs: 270,
+      lanes: [
+        { id: "school", label: "학교", icon: "🏫", direction: "up", key: "↑", keys: ["ArrowUp", "KeyW"] },
+        { id: "stage", label: "공연장", icon: "🎤", direction: "left", key: "←", keys: ["ArrowLeft", "KeyA"] },
+        { id: "bakery", label: "빵집", icon: "🥐", direction: "right", key: "→", keys: ["ArrowRight", "KeyD"] },
+        { id: "store", label: "편의점", icon: "🏪", direction: "down", key: "↓", keys: ["ArrowDown", "KeyS"] }
+      ],
+      parcels: ["school", "bakery", "store", "stage", "school", "store", "bakery", "stage", "store", "school", "stage", "bakery"]
+    }
+  },
+  {
+    id: "bread-job",
+    placeId: "bakery",
+    title: "빵굽기 오븐 알바",
+    shortTitle: "빵굽기",
+    npc: "빵집 주인",
+    icon: "🥐",
+    engine: "breadBake",
+    rewardCoins: 290,
+    energyCost: 1,
+    goal: "오븐 속 빵이 노릇노릇해졌을 때 꺼내요.",
+    productionText: "빵을 알맞게 구워 손님이 먹을 수 있게 만드는 일은 생산 활동이에요.",
+    card: { id: "card-bread-job", type: "production", badge: "🥐", title: "빵굽기 알바", description: "빵을 알맞게 구운 생산 활동", feedback: "사람들이 먹을 음식을 만드는 일은 생산 활동이에요." },
+    config: {
+      targetBakes: 6,
+      ovens: [
+        { id: "croissant", label: "크루아상", icon: "🥐", bakeMs: 3600, perfectWindowMs: 1150 },
+        { id: "bread", label: "식빵", icon: "🍞", bakeMs: 4400, perfectWindowMs: 1200 },
+        { id: "cookie", label: "쿠키", icon: "🍪", bakeMs: 3000, perfectWindowMs: 1050 }
+      ]
+    }
   },
   {
     id: "robot-job",
@@ -214,10 +233,30 @@ export const jobs = [
     engine: "sequenceBuild",
     rewardCoins: 330,
     energyCost: 1,
-    goal: "부품을 올바른 순서로 조립하고 전원을 켜요.",
+    goal: "부품을 알맞은 위치에 드래그해서 배달 로봇을 조립해요.",
     productionText: "배달 서비스에 쓰일 로봇을 고치는 일은 생산 활동이에요.",
     card: { id: "card-robot-job", type: "production", badge: "🤖", title: "배달 로봇 수리 알바", description: "배달 로봇을 고친 생산 활동", feedback: "사람들이 편리하게 서비스를 이용하도록 기계를 고치는 일은 생산 활동이에요." },
-    config: { steps: [{ id: "body", icon: "⬛", label: "몸통" }, { id: "head", icon: "🤖", label: "머리" }, { id: "wheel", icon: "⚙️", label: "바퀴" }, { id: "power", icon: "🔋", label: "전원" }] }
+    config: {
+      slots: [
+        { id: "body", label: "몸통", x: 50, y: 58 },
+        { id: "head", label: "머리", x: 50, y: 31 },
+        { id: "leftWheel", asset: "robot-wheel-left", label: "왼쪽 바퀴", x: 36, y: 77 },
+        { id: "rightWheel", asset: "robot-wheel-right", label: "오른쪽 바퀴", x: 64, y: 77 },
+        { id: "battery", label: "배터리", x: 39, y: 55 },
+        { id: "antenna", label: "안테나", x: 50, y: 14 },
+        { id: "circuit", asset: "circuit-panel", label: "회로판", x: 61, y: 55 }
+      ],
+      parts: [
+        { id: "body", icon: "⬛", label: "몸통" },
+        { id: "head", icon: "🤖", label: "머리" },
+        { id: "leftWheel", asset: "robot-wheel-left", label: "왼쪽 바퀴" },
+        { id: "rightWheel", asset: "robot-wheel-right", label: "오른쪽 바퀴" },
+        { id: "battery", icon: "🔋", label: "배터리" },
+        { id: "antenna", asset: "robot-antenna", label: "안테나" },
+        { id: "circuit", asset: "circuit-panel", label: "회로판" }
+      ],
+      prefilled: ["body", "head"]
+    }
   }
 ];
 
@@ -225,9 +264,7 @@ export const consumptions = [
   { id: "eat-pizza", placeId: "pizza-shop", title: "피자 한 조각 먹기", icon: "🍕", costCoins: 150, energyGain: 1, category: "recovery", resultSticker: "🍕", card: { id: "card-eat-pizza", type: "consumption", badge: "🍕", title: "피자 먹기", description: "번 코인으로 피자를 사 먹은 소비 활동", feedback: "돈을 내고 음식을 사 먹는 것은 소비 활동이에요." } },
   { id: "eat-icecream", placeId: "icecream-shop", title: "아이스크림 먹기", icon: "🍦", costCoins: 180, energyGain: 1, moodGain: 1, category: "recovery", resultSticker: "🍦", card: { id: "card-eat-icecream", type: "consumption", badge: "🍦", title: "아이스크림 먹기", description: "코인을 내고 간식을 산 소비 활동", feedback: "필요하거나 원하는 물건을 사는 것은 소비 활동이에요." } },
   { id: "buy-cape", placeId: "outfit-shop", title: "별 망토 사기", icon: "⭐", costCoins: 300, category: "outfit", equip: "별 망토", resultSticker: "⭐", card: { id: "card-buy-cape", type: "consumption", badge: "⭐", title: "별 망토 사기", description: "번 코인으로 꾸미기 물건을 산 소비 활동", feedback: "돈을 내고 물건을 사는 것도 소비 활동이에요." } },
-  { id: "watch-show", placeId: "stage", title: "공연 보기", icon: "🎟️", costCoins: 250, category: "service", resultSticker: "🎟️", card: { id: "card-watch-show", type: "consumption", badge: "🎟️", title: "공연 보기", description: "코인을 내고 공연 서비스를 이용한 소비 활동", feedback: "돈을 내고 서비스를 이용하는 것도 소비 활동이에요." } },
-  { id: "take-photo", placeId: "photo-studio", title: "기념사진 찍기", icon: "🖼️", costCoins: 200, category: "service", resultSticker: "🖼️", card: { id: "card-take-photo", type: "consumption", badge: "🖼️", title: "기념사진 찍기", description: "사진관 서비스를 이용한 소비 활동", feedback: "돈을 내고 사진 서비스를 이용하는 것은 소비 활동이에요." } },
-  { id: "play-arcade", placeId: "game-center", title: "미니 오락기 하기", icon: "🎮", costCoins: 200, category: "service", resultSticker: "🎮", card: { id: "card-play-arcade", type: "consumption", badge: "🎮", title: "게임센터 이용하기", description: "코인을 내고 게임 서비스를 이용한 소비 활동", feedback: "돈을 내고 즐길 수 있는 서비스를 이용하는 것도 소비 활동이에요." } }
+  { id: "watch-show", placeId: "stage", title: "공연 보기", icon: "🎟️", costCoins: 250, category: "service", resultSticker: "🎟️", card: { id: "card-watch-show", type: "consumption", badge: "🎟️", title: "공연 보기", description: "코인을 내고 공연 서비스를 이용한 소비 활동", feedback: "돈을 내고 서비스를 이용하는 것도 소비 활동이에요." } }
 ];
 
 export const activityPlaces = [

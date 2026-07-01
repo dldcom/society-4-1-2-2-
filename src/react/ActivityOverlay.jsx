@@ -1,6 +1,17 @@
-﻿import { useCallback, useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getConsumptionsAtPlace, getJobsAtPlace } from "../data/alba.js";
 import { getMiniAsset, getMiniAssetForPart, getMiniAssetForToken, getMiniAssetForWire } from "../data/minigameAssets.js";
+import bakeryLabelUrl from "../assets/items/parcel-labels/split/bakery.png";
+import schoolLabelUrl from "../assets/items/parcel-labels/split/school.png";
+import stageLabelUrl from "../assets/items/parcel-labels/split/stage.png";
+import storeLabelUrl from "../assets/items/parcel-labels/split/store.png";
+
+const parcelLabelImages = {
+  bakery: bakeryLabelUrl,
+  school: schoolLabelUrl,
+  stage: stageLabelUrl,
+  store: storeLabelUrl
+};
 
 export function ActivityOverlay({ place, progress, onClose, onCompleteJob, onBuyConsumption }) {
   const jobs = useMemo(() => getJobsAtPlace(place.id), [place.id]);
@@ -63,16 +74,21 @@ export function ActivityOverlay({ place, progress, onClose, onCompleteJob, onBuy
   }, [choices.length, dialogComplete, mode, runSelectedChoice]);
 
   if (activeJob) {
+    const immersive = ["conveyorSort", "roleRhythm", "pizzaCraft", "icecreamStack", "careGauge", "sequenceBuild", "breadBake"].includes(activeJob.engine);
     return (
       <div className="overlay">
-        <div className="modal game-modal">
-          <div className="game-head">
-            <div>
-              <p className="eyebrow">{npc.name}의 부탁</p>
-              <h2>{activeJob.icon} {activeJob.title}</h2>
+        <div className={`modal game-modal ${immersive ? "immersive-game-modal" : ""}`}>
+          {immersive ? (
+            <button className="icon-button immersive-close-button" onClick={() => setActiveJob(null)}>X</button>
+          ) : (
+            <div className="game-head">
+              <div>
+                <p className="eyebrow">{npc.name}의 부탁</p>
+                <h2>{activeJob.icon} {activeJob.title}</h2>
+              </div>
+              <button className="icon-button" onClick={() => setActiveJob(null)}>X</button>
             </div>
-            <button className="icon-button" onClick={() => setActiveJob(null)}>X</button>
-          </div>
+          )}
           <div className="game-body">
             <MiniGame job={activeJob} onComplete={() => {
               onCompleteJob(activeJob);
@@ -154,6 +170,10 @@ function splitDialogLines(line) {
     .split(/\n+/)
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
 }
 
 function TypewriterDialog({ lines, onCompleteChange }) {
@@ -286,9 +306,12 @@ function ActivityList({ jobs, consumptions, progress, title, onBack, onStartJob,
   </div>;
 }function MiniGame({ job, onComplete }) {
   if (job.engine === "careGauge") return <CareGaugeGame job={job} onComplete={onComplete} />;
+  if (job.engine === "pizzaCraft") return <PizzaCraftGame job={job} onComplete={onComplete} />;
+  if (job.engine === "icecreamStack") return <IcecreamStackGame job={job} onComplete={onComplete} />;
+  if (job.engine === "breadBake") return <BreadBakeGame job={job} onComplete={onComplete} />;
   if (job.engine === "wirePuzzle") return <WirePuzzleGame job={job} onComplete={onComplete} />;
   if (job.engine === "roleRhythm") return <RoleRhythmGame job={job} onComplete={onComplete} />;
-  if (job.engine === "photoTiming") return <PhotoTimingGame job={job} onComplete={onComplete} />;
+  if (job.engine === "conveyorSort") return <ConveyorSortGame job={job} onComplete={onComplete} />;
   if (job.engine === "deliveryGrid") return <DeliveryGridGame job={job} onComplete={onComplete} />;
   if (job.engine === "sequenceBuild") return <SequenceBuildGame job={job} onComplete={onComplete} />;
   return <OrderCraftGame job={job} onComplete={onComplete} />;
@@ -338,24 +361,608 @@ function OrderCraftGame({ job, onComplete }) {
   </MiniFrame>;
 }
 
+function PizzaCraftGame({ job, onComplete }) {
+  const makePizzaOrder = useCallback(() => {
+    const choices = job.config.choices ?? [];
+    if (choices.length < 4) return job.config.order ?? job.config.orders?.[0] ?? [];
+    return [...choices]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 4);
+  }, [job.config.choices, job.config.order, job.config.orders]);
+  const makePizzaOrders = useCallback(() => {
+    if ((job.config.choices ?? []).length < 4) return job.config.orders ?? [job.config.order];
+    return Array.from({ length: 3 }, makePizzaOrder);
+  }, [job.config.choices, job.config.order, job.config.orders, makePizzaOrder]);
+  const [orders, setOrders] = useState(() => job.config.orders ?? [job.config.order]);
+  const [pizzaIndex, setPizzaIndex] = useState(0);
+  const [showGuide, setShowGuide] = useState(true);
+  const [countdown, setCountdown] = useState(null);
+  const [picked, setPicked] = useState([]);
+  const [completedPizzas, setCompletedPizzas] = useState(0);
+  const [boardPhase, setBoardPhase] = useState("enter");
+  const [mistakes, setMistakes] = useState(0);
+  const [feedback, setFeedback] = useState(null);
+  const boardTimer = useRef(null);
+  const order = orders[pizzaIndex] ?? orders[0];
+  const done = completedPizzas >= orders.length;
+
+  useEffect(() => {
+    if (countdown === null) return undefined;
+    if (countdown <= 0) {
+      setCountdown(null);
+      return undefined;
+    }
+    const timer = window.setTimeout(() => setCountdown((value) => value - 1), 760);
+    return () => window.clearTimeout(timer);
+  }, [countdown]);
+
+  useEffect(() => () => {
+    if (boardTimer.current) window.clearTimeout(boardTimer.current);
+  }, []);
+
+  useEffect(() => {
+    if (showGuide || countdown !== null || boardPhase !== "enter") return undefined;
+    setBoardPhase("enter");
+    const timer = window.setTimeout(() => setBoardPhase("idle"), 420);
+    return () => window.clearTimeout(timer);
+  }, [boardPhase, showGuide, countdown]);
+
+  const retryCurrentPizza = () => {
+    if (boardTimer.current) window.clearTimeout(boardTimer.current);
+    setOrders((value) => value.map((item, index) => index === pizzaIndex ? makePizzaOrder() : item));
+    setPicked([]);
+    setBoardPhase("enter");
+    setFeedback(null);
+    setCountdown(3);
+    setShowGuide(false);
+  };
+
+  const showHint = () => {
+    if (showGuide || done || boardPhase === "exit") return;
+    setFeedback({ id: `hint-${performance.now()}`, text: "힌트!", kind: "hit" });
+    setCountdown(3);
+  };
+
+  const choose = (choice) => {
+    if (showGuide || countdown !== null || done || boardPhase === "exit") return;
+    const expected = order[picked.length];
+    if (choice !== expected) {
+      setMistakes((value) => value + 1);
+      setPicked([]);
+      setFeedback({ id: `wrong-${choice}-${performance.now()}`, text: "다시!", kind: "wrong" });
+      return;
+    }
+    const nextPicked = [...picked, choice];
+    if (nextPicked.length === order.length) {
+      const nextPizzaIndex = pizzaIndex + 1;
+      setPicked(nextPicked);
+      setBoardPhase("exit");
+      setFeedback({ id: `done-${choice}-${performance.now()}`, text: nextPizzaIndex >= orders.length ? "3판 완성!" : "피자 완성!", kind: "hit" });
+      if (boardTimer.current) window.clearTimeout(boardTimer.current);
+      boardTimer.current = window.setTimeout(() => {
+        setCompletedPizzas(nextPizzaIndex);
+        setPicked([]);
+        if (nextPizzaIndex < orders.length) {
+          setPizzaIndex(nextPizzaIndex);
+          setBoardPhase("enter");
+          setCountdown(3);
+          setFeedback({ id: `next-${choice}-${performance.now()}`, text: "다음 주문!", kind: "hit" });
+          boardTimer.current = window.setTimeout(() => setBoardPhase("idle"), 420);
+        }
+      }, 520);
+      return;
+    }
+    setPicked(nextPicked);
+    setFeedback({ id: `hit-${choice}-${performance.now()}`, text: "좋아!", kind: "hit" });
+  };
+
+  return <div className="phaser-like-minigame alba-minigame pizza-fullscreen-minigame">
+    <div className="pizza-craft-zone">
+      <div className="pizza-workbench">
+        <div className="pizza-scoreboard"><b>피자 {completedPizzas}/{orders.length}</b><span>토핑 {picked.length}/{order.length}</span><span>실수 {mistakes}</span></div>
+        {!showGuide && !done && countdown !== null && (
+          <div className="pizza-live-order-card" key={`pizza-order-${pizzaIndex}`}>
+            <b>주문 {pizzaIndex + 1}</b>
+            <div>{order.map((token, index) => <MiniAssetIcon key={`${token}-${index}`} token={token} jobId={job.id} />)}</div>
+          </div>
+        )}
+        {feedback && <div key={feedback.id} className={`sort-feedback-bubble ${feedback.kind}`}>{feedback.text}</div>}
+        {showGuide && (
+          <div className="sort-guide-dialog pizza-guide-dialog">
+            <div className="guide-portrait">🍕</div>
+            <div>
+              <b>피자 토핑 방법</b>
+              <p>주문표 순서를 기억하고, 피자 3판에 토핑 4개씩 차례대로 올려요.</p>
+              <button
+                className="primary"
+                onClick={() => {
+                  setOrders(job.config.orders ?? [job.config.order]);
+                  setPicked([]);
+                  setPizzaIndex(0);
+                  setCompletedPizzas(0);
+                  setBoardPhase("enter");
+                  setFeedback(null);
+                  setShowGuide(false);
+                  setCountdown(3);
+                }}
+              >
+                시작
+              </button>
+            </div>
+          </div>
+        )}
+        {countdown !== null && <div key={`pizza-countdown-${countdown}`} className="sort-countdown">{countdown > 0 ? countdown : "START"}</div>}
+        <div key={`pizza-board-${pizzaIndex}`} className={`pizza-board ${feedback?.kind === "wrong" ? "shake" : ""} ${boardPhase === "exit" ? "slide-out" : ""} ${boardPhase === "enter" ? "slide-in" : ""}`}>
+          <MiniAssetIcon token={job.config.base} jobId={job.id} className="pizza-base-large" />
+          <div className="pizza-topping-layer">
+            {picked.map((token, index) => (
+              <MiniAssetIcon
+                key={`${token}-${index}`}
+                token={token}
+                jobId={job.id}
+                className={`pizza-topping topping-${index}`}
+              />
+            ))}
+          </div>
+        </div>
+        {done && <div className="sort-complete-panel"><b>피자 완성!</b><button className="primary" onClick={onComplete}>카드 받기</button></div>}
+      </div>
+      <div className="pizza-control-deck">
+        <div className="pizza-ingredient-row">
+          {job.config.choices.map((choice) => (
+            <button key={choice} onClick={() => choose(choice)}>
+              <MiniAssetIcon token={choice} jobId={job.id} />
+            </button>
+          ))}
+        </div>
+        <div className="pizza-action-row">
+          <button className="secondary" onClick={showHint}>힌트</button>
+          <button className="secondary" onClick={retryCurrentPizza}>다시</button>
+        </div>
+      </div>
+    </div>
+  </div>;
+}
+
+function IcecreamStackGame({ job, onComplete }) {
+  const orders = job.config.orders;
+  const [orderIndex, setOrderIndex] = useState(0);
+  const [countdown, setCountdown] = useState(3);
+  const [picked, setPicked] = useState([]);
+  const [completed, setCompleted] = useState(0);
+  const [standPhase, setStandPhase] = useState("enter");
+  const [mistakes, setMistakes] = useState(0);
+  const [feedback, setFeedback] = useState(null);
+  const order = orders[orderIndex] ?? orders[0];
+  const done = completed >= orders.length;
+
+  useEffect(() => {
+    if (countdown === null) return undefined;
+    if (countdown <= 0) {
+      setCountdown(null);
+      return undefined;
+    }
+    const timer = window.setTimeout(() => setCountdown((value) => value - 1), 760);
+    return () => window.clearTimeout(timer);
+  }, [countdown]);
+
+  const showHint = () => {
+    if (done || standPhase === "exit") return;
+    setFeedback({ id: `ice-hint-${performance.now()}`, text: "힌트!", kind: "hit" });
+    setCountdown(3);
+  };
+
+  const retryCurrentOrder = () => {
+    if (done || standPhase === "exit") return;
+    setPicked([]);
+    setStandPhase("enter");
+    setFeedback({ id: `ice-retry-${performance.now()}`, text: "다시!", kind: "wrong" });
+    setCountdown(3);
+  };
+
+  const choose = (choice) => {
+    if (done || countdown !== null || standPhase === "exit") return;
+    const expected = order[picked.length];
+    if (choice !== expected) {
+      setMistakes((value) => value + 1);
+      setPicked([]);
+      setFeedback({ id: `ice-wrong-${performance.now()}`, text: "주문 확인!", kind: "wrong" });
+      return;
+    }
+    const nextPicked = [...picked, choice];
+    setPicked(nextPicked);
+    if (nextPicked.length === order.length) {
+      const nextCompleted = completed + 1;
+      setStandPhase("exit");
+      setFeedback({ id: `ice-done-${performance.now()}`, text: nextCompleted >= orders.length ? "완료!" : "손님 만족!", kind: "hit" });
+      window.setTimeout(() => {
+        setCompleted(nextCompleted);
+        setPicked([]);
+        if (nextCompleted < orders.length) {
+          setOrderIndex((value) => value + 1);
+          setStandPhase("enter");
+          setCountdown(3);
+        }
+      }, 650);
+      return;
+    }
+    setFeedback({ id: `ice-hit-${performance.now()}`, text: "좋아!", kind: "hit" });
+  };
+
+  return <div className="phaser-like-minigame alba-minigame icecream-stack-minigame">
+    <div className="icecream-counter">
+      <div className="icecream-scoreboard"><b>손님 {completed}/{orders.length}</b><span>실수 {mistakes}</span></div>
+      {!done && countdown !== null && <div className="icecream-order-card">
+        <b>주문 {orderIndex + 1}</b>
+        <div>{order.map((token, index) => <MiniAssetIcon key={`${token}-${index}`} token={token} jobId={job.id} />)}</div>
+      </div>}
+      {countdown !== null && <div key={`ice-countdown-${countdown}`} className="sort-countdown">{countdown > 0 ? countdown : "START"}</div>}
+      {feedback && <div key={feedback.id} className={`sort-feedback-bubble ${feedback.kind}`}>{feedback.text}</div>}
+      <div key={`icecream-stand-${orderIndex}`} className={`icecream-build-stand ${standPhase === "exit" ? "slide-out" : ""} ${standPhase === "enter" ? "slide-in" : ""}`}>
+        {picked.map((token, index) => (
+          <MiniAssetIcon
+            key={`${token}-${index}`}
+            token={token}
+            jobId={job.id}
+            className={`icecream-stack-item icecream-layer-${index}`}
+          />
+        ))}
+        {!picked.length && <MiniAssetIcon id="icecream-cone" className="icecream-ghost-base" />}
+      </div>
+      {!done && <div className="icecream-action-row">
+        <button className="secondary" onClick={showHint}>힌트</button>
+        <button className="secondary" onClick={retryCurrentOrder}>다시</button>
+      </div>}
+      {done && <div className="sort-complete-panel"><b>아이스크림 완성!</b><button className="primary" onClick={onComplete}>카드 받기</button></div>}
+    </div>
+    <div className="icecream-ingredient-row">
+      {job.config.choices.map((choice) => (
+        <button key={choice} onClick={() => choose(choice)}>
+          <MiniAssetIcon token={choice} jobId={job.id} />
+        </button>
+      ))}
+    </div>
+  </div>;
+}
+
 function CareGaugeGame({ job, onComplete }) {
   const pets = job.config.pets;
-  const [scores, setScores] = useState(Object.fromEntries(pets.map((pet) => [pet.id, 0])));
+  const tools = job.config.tools;
+  const targetCare = job.config.targetCare ?? 10;
+  const petSlots = useMemo(() => [
+    { x: 26, y: 34 },
+    { x: 72, y: 34 },
+    { x: 26, y: 70 },
+    { x: 72, y: 70 }
+  ], []);
+  const [needIndexes, setNeedIndexes] = useState(Object.fromEntries(pets.map((pet, index) => [pet.id, index % pet.needs.length])));
+  const positions = useMemo(() => Object.fromEntries(pets.map((pet, index) => [
+    pet.id,
+    petSlots[index % petSlots.length]
+  ])), [petSlots, pets]);
+  const [selectedTool, setSelectedTool] = useState(null);
+  const [careCount, setCareCount] = useState(0);
   const [mistakes, setMistakes] = useState(0);
-  const totalNeeds = pets.reduce((sum, pet) => sum + pet.needs.length, 0);
-  const doneCount = Object.values(scores).reduce((sum, score) => sum + score, 0);
-  const done = doneCount >= totalNeeds;
-  const currentNeed = (pet) => pet.needs[Math.min(scores[pet.id], pet.needs.length - 1)];
-  const useTool = (tool, pet) => {
-    if (done || scores[pet.id] >= pet.needs.length) return;
-    if (tool.label === currentNeed(pet)) setScores((value) => ({ ...value, [pet.id]: value[pet.id] + 1 }));
-    else setMistakes((value) => value + 1);
+  const [feedback, setFeedback] = useState(null);
+  const done = careCount >= targetCare;
+  const currentNeed = (pet) => pet.needs[needIndexes[pet.id] % pet.needs.length];
+  const toolById = useMemo(() => Object.fromEntries(tools.map((tool) => [tool.id, tool])), [tools]);
+
+  const useTool = (toolId, pet) => {
+    if (done) return;
+    const tool = toolById[toolId];
+    if (!tool) return;
+    if (tool.id === currentNeed(pet)) {
+      setCareCount((value) => value + 1);
+      setNeedIndexes((value) => ({ ...value, [pet.id]: value[pet.id] + 1 }));
+      setFeedback({ id: `pet-hit-${pet.id}-${performance.now()}`, text: `${pet.name} 만족!`, kind: "hit" });
+    } else {
+      setMistakes((value) => value + 1);
+      setFeedback({ id: `pet-miss-${pet.id}-${performance.now()}`, text: "다른 걸 원해요", kind: "wrong" });
+    }
+    setSelectedTool(null);
   };
-  return <MiniFrame job={job} progress={(doneCount / totalNeeds) * 100} done={done} onComplete={onComplete} message={done ? "두 동물이 모두 만족했어요!" : `동물별 요구를 보고 맞는 도구를 골라요. 실수 ${mistakes}번`}>
-    <div className="care-zone multi-care-zone">
-      {pets.map((pet) => <div className="pet-card" key={pet.id}><MiniAssetIcon token={pet.icon} className="pet-icon" /><b>{pet.name}</b><em>{scores[pet.id] >= pet.needs.length ? "만족" : currentNeed(pet)}</em><div className="tool-tray compact-tools">{job.config.tools.map((tool) => <button key={tool.id} onClick={() => useTool(tool, pet)}><MiniAssetIcon id={getMiniAssetForPart(tool)} /><small>{tool.label}</small></button>)}</div></div>)}
+
+  return <div className="phaser-like-minigame alba-minigame pet-cafe-minigame">
+    <div className="pet-cafe-stage">
+      <div className="pet-cafe-scoreboard"><b>{careCount}/{targetCare}</b><span>실수 {mistakes}</span></div>
+      {feedback && <div key={feedback.id} className={`sort-feedback-bubble ${feedback.kind}`}>{feedback.text}</div>}
+      {pets.map((pet) => {
+        const need = toolById[currentNeed(pet)];
+        const position = positions[pet.id] ?? { x: 20, y: 20 };
+        return <button
+          key={pet.id}
+          className="roaming-pet"
+          style={{ left: `${position.x}%`, top: `${position.y}%` }}
+          onClick={() => selectedTool && useTool(selectedTool, pet)}
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={(event) => {
+            event.preventDefault();
+            useTool(event.dataTransfer.getData("text/pet-tool"), pet);
+          }}
+        >
+          <div className="pet-need-bubble">
+            <MiniAssetIcon id={getMiniAssetForPart(need)} />
+          </div>
+          <MiniAssetIcon id={pet.asset} className="roaming-pet-sprite" />
+          <small>{pet.name}</small>
+        </button>;
+      })}
+      {done && <div className="sort-complete-panel"><b>펫카페 돌봄 완료!</b><button className="primary" onClick={onComplete}>카드 받기</button></div>}
     </div>
-  </MiniFrame>;
+    <div className="pet-tool-dock">
+      {tools.map((tool) => (
+        <button
+          key={tool.id}
+          className={selectedTool === tool.id ? "selected" : ""}
+          draggable
+          onClick={() => setSelectedTool((value) => value === tool.id ? null : tool.id)}
+          onDragStart={(event) => {
+            event.dataTransfer.setData("text/pet-tool", tool.id);
+            setSelectedTool(tool.id);
+          }}
+        >
+          <MiniAssetIcon id={getMiniAssetForPart(tool)} />
+          <small>{tool.label}</small>
+        </button>
+      ))}
+    </div>
+  </div>;
+}
+
+function createBakeSlots(ovens) {
+  const now = performance.now();
+  return ovens.map((oven, index) => ({
+    ...oven,
+    slot: index,
+    startedAt: now - index * 420
+  }));
+}
+
+function BreadBakeGame({ job, onComplete }) {
+  const ovens = job.config.ovens ?? [];
+  const targetBakes = job.config.targetBakes ?? 6;
+  const [showGuide, setShowGuide] = useState(true);
+  const [countdown, setCountdown] = useState(null);
+  const [ovenSlots, setOvenSlots] = useState(() => createBakeSlots(ovens));
+  const [baked, setBaked] = useState(0);
+  const [mistakes, setMistakes] = useState(0);
+  const [feedback, setFeedback] = useState(null);
+  const [now, setNow] = useState(() => performance.now());
+  const started = !showGuide && countdown === null;
+  const done = baked >= targetBakes;
+
+  useEffect(() => {
+    if (!started || done) return undefined;
+    const timer = window.setInterval(() => setNow(performance.now()), 120);
+    return () => window.clearInterval(timer);
+  }, [done, started]);
+
+  useEffect(() => {
+    if (countdown === null) return undefined;
+    if (countdown <= 0) {
+      setCountdown(null);
+      setOvenSlots(createBakeSlots(ovens));
+      return undefined;
+    }
+    const timer = window.setTimeout(() => setCountdown((value) => value - 1), 760);
+    return () => window.clearTimeout(timer);
+  }, [countdown, ovens]);
+
+  const startGame = () => {
+    setShowGuide(false);
+    setCountdown(3);
+    setBaked(0);
+    setMistakes(0);
+    setFeedback(null);
+  };
+
+  const resetSlot = (slotIndex) => {
+    setOvenSlots((value) => value.map((slot, index) => index === slotIndex ? { ...slot, startedAt: performance.now() } : slot));
+  };
+
+  const pullBread = (slot, slotIndex) => {
+    if (!started || done) return;
+    const elapsed = now - slot.startedAt;
+    const perfectStart = slot.bakeMs - slot.perfectWindowMs / 2;
+    const perfectEnd = slot.bakeMs + slot.perfectWindowMs / 2;
+    if (elapsed >= perfectStart && elapsed <= perfectEnd) {
+      setBaked((value) => value + 1);
+      setFeedback({ id: `bread-hit-${slot.id}-${performance.now()}`, text: "노릇!", kind: "hit" });
+    } else {
+      setMistakes((value) => value + 1);
+      setFeedback({ id: `bread-miss-${slot.id}-${performance.now()}`, text: elapsed < perfectStart ? "아직 덜 익었어요" : "조금 탔어요", kind: "wrong" });
+    }
+    resetSlot(slotIndex);
+  };
+
+  return <div className="phaser-like-minigame alba-minigame bread-bake-minigame">
+    <div className="bread-bakery-stage">
+      <div className="bread-scoreboard"><b>{baked}/{targetBakes}</b><span>실수 {mistakes}</span></div>
+      {feedback && <div key={feedback.id} className={`sort-feedback-bubble ${feedback.kind}`}>{feedback.text}</div>}
+      {showGuide && (
+        <div className="sort-guide-dialog bread-guide-dialog">
+          <div className="guide-portrait">🥐</div>
+          <div>
+            <b>빵굽기 알바</b>
+            <p>오븐 속 빵 색이 노릇한 구간에 들어오면 꺼내요. 너무 빠르면 덜 익고, 늦으면 타요.</p>
+            <button className="primary" onClick={startGame}>시작</button>
+          </div>
+        </div>
+      )}
+      {countdown !== null && <div key={`bread-countdown-${countdown}`} className="sort-countdown">{countdown > 0 ? countdown : "START"}</div>}
+      <div className="bread-oven-row">
+        {ovenSlots.map((slot, index) => {
+          const elapsed = started ? now - slot.startedAt : 0;
+          const perfectStart = slot.bakeMs - slot.perfectWindowMs / 2;
+          const perfectEnd = slot.bakeMs + slot.perfectWindowMs / 2;
+          const progress = clamp((elapsed / (perfectEnd + 1100)) * 100, 0, 100);
+          const status = elapsed < perfectStart ? "raw" : elapsed <= perfectEnd ? "perfect" : "burnt";
+          return <button
+            key={`${slot.id}-${index}`}
+            className={`bread-oven ${status}`}
+            onClick={() => pullBread(slot, index)}
+            disabled={!started || done}
+          >
+            <span className="oven-heat" />
+            <span className="bread-loaf">{slot.icon}</span>
+            <b>{slot.label}</b>
+            <span className="bake-meter"><i style={{ width: `${progress}%` }} /></span>
+            <small>{status === "raw" ? "기다리기" : status === "perfect" ? "꺼내기!" : "탐"}</small>
+          </button>;
+        })}
+      </div>
+      <div className="bread-counter-tray">
+        {Array.from({ length: targetBakes }).map((_, index) => <span key={index} className={index < baked ? "filled" : ""}>{index < baked ? "🥐" : ""}</span>)}
+      </div>
+      {done && <div className="sort-complete-panel bread-complete-panel">
+        <MiniAssetIcon id="bread-box" />
+        <b>갓 구운 빵 완성!</b>
+        <button className="primary" onClick={onComplete}>카드 받기</button>
+      </div>}
+    </div>
+  </div>;
+}
+
+const circuitDirections = ["N", "E", "S", "W"];
+const circuitOpposite = { N: "S", E: "W", S: "N", W: "E" };
+const circuitDelta = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] };
+const circuitBaseSides = {
+  line: ["N", "S"],
+  corner: ["N", "E"],
+  tee: ["N", "E", "S"],
+  cross: ["N", "E", "S", "W"]
+};
+
+function circuitCellKey(cell) {
+  return cell.join(",");
+}
+
+function rotateCircuitSides(type, rotation) {
+  const base = circuitBaseSides[type] ?? circuitBaseSides.line;
+  return base.map((side) => circuitDirections[(circuitDirections.indexOf(side) + rotation) % circuitDirections.length]);
+}
+
+function analyzeCircuit(job, rotations) {
+  const { cols, rows, start, goal, tiles } = job.config;
+  const startKey = circuitCellKey(start);
+  const goalKey = circuitCellKey(goal);
+  const queue = [start];
+  const powered = new Set();
+
+  const getSides = (x, y) => {
+    const index = y * cols + x;
+    const tile = tiles[index];
+    if (!tile) return [];
+    return rotateCircuitSides(tile.type, rotations[index] ?? tile.rot ?? 0);
+  };
+
+  if (!getSides(start[0], start[1]).includes("W")) {
+    return { powered, connected: false };
+  }
+
+  powered.add(startKey);
+  while (queue.length) {
+    const [x, y] = queue.shift();
+    const sides = getSides(x, y);
+    for (const side of sides) {
+      const [dx, dy] = circuitDelta[side];
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) continue;
+      const nextSides = getSides(nx, ny);
+      if (!nextSides.includes(circuitOpposite[side])) continue;
+      const key = circuitCellKey([nx, ny]);
+      if (powered.has(key)) continue;
+      powered.add(key);
+      queue.push([nx, ny]);
+    }
+  }
+
+  const goalSides = getSides(goal[0], goal[1]);
+  return { powered, connected: powered.has(goalKey) && goalSides.includes("E") };
+}
+
+function ArcadeCircuitGame({ job, onComplete }) {
+  const { cols, rows, tiles, parMoves } = job.config;
+  const [rotations, setRotations] = useState(() => tiles.map((tile) => tile.rot ?? 0));
+  const [moves, setMoves] = useState(0);
+  const [pulse, setPulse] = useState("");
+  const result = useMemo(() => analyzeCircuit(job, rotations), [job, rotations]);
+  const done = result.connected;
+  const progress = done ? 100 : Math.min(92, Math.round((result.powered.size / tiles.length) * 120));
+
+  useEffect(() => {
+    if (!done) return undefined;
+    setPulse("전원이 들어왔어요!");
+    const timer = window.setTimeout(() => setPulse(""), 1300);
+    return () => window.clearTimeout(timer);
+  }, [done]);
+
+  const rotateTile = (index) => {
+    if (done) return;
+    setRotations((value) => value.map((rotation, tileIndex) => tileIndex === index ? (rotation + 1) % 4 : rotation));
+    setMoves((value) => value + 1);
+  };
+
+  const resetPuzzle = () => {
+    setRotations(tiles.map((tile) => tile.rot ?? 0));
+    setMoves(0);
+    setPulse("");
+  };
+
+  return <div className="arcade-circuit-minigame">
+    <div className="arcade-circuit-shell">
+      <div className="arcade-circuit-top">
+        <div className="arcade-machine-bay">
+          <MiniAssetIcon id={done ? "arcade-fixed" : "arcade-broken"} />
+        </div>
+        <div className="arcade-circuit-meter">
+          <span>MOVE</span>
+          <b>{moves}</b>
+          <small>기준 {parMoves}</small>
+        </div>
+        <div className="arcade-machine-bay arcade-control-bay">
+          <MiniAssetIcon id={done ? "button-red" : "arcade-lever"} />
+        </div>
+      </div>
+
+      <div className="arcade-circuit-board">
+        <div className="circuit-port circuit-port-left"><MiniAssetIcon id="battery" /></div>
+        <div className="circuit-grid" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}>
+          {tiles.map((tile, index) => {
+            const x = index % cols;
+            const y = Math.floor(index / cols);
+            const key = circuitCellKey([x, y]);
+            const sides = rotateCircuitSides(tile.type, rotations[index]);
+            const powered = result.powered.has(key);
+            return <button
+              key={key}
+              className={`circuit-tile ${powered ? "powered" : ""} ${done ? "solved" : ""}`}
+              onClick={() => rotateTile(index)}
+              aria-label={`회로 ${x + 1}, ${y + 1}`}
+            >
+              {sides.map((side) => <span key={side} className={`circuit-wire ${side}`} />)}
+              <span className="circuit-core" />
+            </button>;
+          })}
+        </div>
+        <div className="circuit-port circuit-port-right"><MiniAssetIcon id={done ? "arcade-fixed" : "circuit-panel"} /></div>
+      </div>
+
+      <div className="arcade-circuit-controls">
+        <button className="secondary" onClick={resetPuzzle}>다시</button>
+        <div className="arcade-circuit-progress"><span style={{ width: `${progress}%` }} /></div>
+      </div>
+
+      {pulse && <div className="arcade-speech-bubble">{pulse}</div>}
+      {done && <div className="arcade-complete-panel">
+        <MiniAssetIcon id="arcade-fixed" />
+        <b>오락기 수리 완료!</b>
+        <button className="primary" onClick={onComplete}>카드 받기</button>
+      </div>}
+    </div>
+  </div>;
 }
 
 function WirePuzzleGame({ job, onComplete }) {
@@ -458,16 +1065,17 @@ function RoleRhythmGame({ job, onComplete }) {
     const hitAt = 900 + index * beatMs;
     return { id: `${token}-${index}`, token, lane: Math.max(0, lane), spawnAt: hitAt - travelMs, hitAt };
   }), [beatMs, job.config.notes, roles, travelMs]);
+  const [showGuide, setShowGuide] = useState(true);
+  const [countdown, setCountdown] = useState(null);
   const [startedAt, setStartedAt] = useState(() => performance.now());
   const [elapsed, setElapsed] = useState(0);
   const [judgements, setJudgements] = useState({});
   const [score, setScore] = useState(0);
   const [miss, setMiss] = useState(0);
   const [combo, setCombo] = useState(0);
-  const [lastJudge, setLastJudge] = useState("준비");
+  const [feedback, setFeedback] = useState(null);
   const finished = elapsed > chart[chart.length - 1].hitAt + 700;
   const done = finished && score >= targetHits;
-  const progress = Math.min(100, (score / targetHits) * 100);
   const reset = () => {
     setStartedAt(performance.now());
     setElapsed(0);
@@ -475,9 +1083,12 @@ function RoleRhythmGame({ job, onComplete }) {
     setScore(0);
     setMiss(0);
     setCombo(0);
-    setLastJudge("준비");
+    setFeedback(null);
+    setShowGuide(false);
+    setCountdown(3);
   };
   useEffect(() => {
+    if (showGuide || countdown !== null) return undefined;
     let frame = 0;
     const tick = () => {
       setElapsed(performance.now() - startedAt);
@@ -485,17 +1096,30 @@ function RoleRhythmGame({ job, onComplete }) {
     };
     frame = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(frame);
-  }, [startedAt]);
+  }, [countdown, showGuide, startedAt]);
+  useEffect(() => {
+    if (countdown === null) return undefined;
+    if (countdown <= 0) {
+      setStartedAt(performance.now());
+      setElapsed(0);
+      setCountdown(null);
+      return undefined;
+    }
+    const timer = window.setTimeout(() => setCountdown((value) => value - 1), 760);
+    return () => window.clearTimeout(timer);
+  }, [countdown]);
   useEffect(() => {
     chart.forEach((note) => {
+      if (showGuide || countdown !== null) return;
       if (judgements[note.id] || elapsed <= note.hitAt + hitWindowMs) return;
       setJudgements((value) => value[note.id] ? value : { ...value, [note.id]: "miss" });
       setMiss((value) => value + 1);
       setCombo(0);
-      setLastJudge("Miss");
+      setFeedback({ id: `${note.id}-miss`, text: "Miss", kind: "miss" });
     });
-  }, [chart, elapsed, hitWindowMs, judgements]);
+  }, [chart, countdown, elapsed, hitWindowMs, judgements, showGuide]);
   const hitLane = useCallback((lane) => {
+    if (showGuide || countdown !== null) return;
     if (done || finished) return;
     const note = chart
       .filter((item) => item.lane === lane && !judgements[item.id])
@@ -505,15 +1129,15 @@ function RoleRhythmGame({ job, onComplete }) {
     if (!note) {
       setMiss((value) => value + 1);
       setCombo(0);
-      setLastJudge("Too early");
+      setFeedback({ id: `early-${elapsed}`, text: "Too early", kind: "miss" });
       return;
     }
     const grade = note.diff < 90 ? "Perfect" : note.diff < 170 ? "Good" : "Ok";
     setJudgements((value) => ({ ...value, [note.id]: grade.toLowerCase() }));
     setScore((value) => value + 1);
     setCombo((value) => value + 1);
-    setLastJudge(grade);
-  }, [chart, done, elapsed, finished, hitWindowMs, judgements]);
+    setFeedback({ id: `${note.id}-${grade}`, text: grade, kind: "hit" });
+  }, [chart, countdown, done, elapsed, finished, hitWindowMs, judgements, showGuide]);
   useEffect(() => {
     const onKeyDown = (event) => {
       const lane = roles.findIndex((role) => role.keys?.includes(event.code));
@@ -525,22 +1149,47 @@ function RoleRhythmGame({ job, onComplete }) {
     return () => window.removeEventListener("keydown", onKeyDown, true);
   }, [hitLane, roles]);
   const activeNotes = chart.filter((note) => elapsed >= note.spawnAt && elapsed <= note.hitAt + hitWindowMs && !judgements[note.id]);
-  return <MiniFrame job={job} progress={progress} done={done} onComplete={onComplete} message={done ? "무대 준비 성공! 타이밍이 좋아요." : finished ? `성공 ${score}/${targetHits}. 조금 더 맞춰야 해요.` : `${targetHits}개 이상 맞춰요. 성공 ${score} · 실수 ${miss} · 콤보 ${combo}`}>
-    <div className="rhythm-stage alba-rhythm role-rhythm rhythm-runner">
-      <div className="rhythm-scoreboard"><b>{lastJudge}</b><span>{score}/{targetHits}</span></div>
-      <div className="rhythm-lanes">
-        {roles.map((role, lane) => <div className="rhythm-lane" key={role.icon}>
-          {activeNotes.filter((note) => note.lane === lane).map((note) => {
-            const y = Math.min(96, Math.max(0, ((elapsed - note.spawnAt) / travelMs) * 88));
-            return <div className="falling-note" key={note.id} style={{ top: `${y}%` }}><MiniAssetIcon token={note.token} /></div>;
-          })}
-          <div className="rhythm-hit-line" />
-        </div>)}
+  return <div className="phaser-like-minigame alba-minigame rhythm-fullscreen-minigame">
+    <div className="stage-rhythm-zone">
+      <div className="stage-rhythm-arena">
+        <div className="rhythm-scoreboard stage-scoreboard"><b>{score}/{targetHits}</b><span>Combo {combo}</span><small>Miss {miss}</small></div>
+        {feedback && <div key={feedback.id} className={`sort-feedback-bubble ${feedback.kind}`}>{feedback.text}</div>}
+        {showGuide && (
+          <div className="sort-guide-dialog rhythm-guide-dialog">
+            <div className="guide-portrait">🎤</div>
+            <div>
+              <b>공연 준비 방법</b>
+              <p>노트가 아래 노란 판정선에 닿는 순간, 같은 역할 버튼이나 키를 눌러 무대 타이밍을 맞춰요.</p>
+              <button
+                className="primary"
+                onClick={() => {
+                  setElapsed(0);
+                  setShowGuide(false);
+                  setCountdown(3);
+                }}
+              >
+                시작
+              </button>
+            </div>
+          </div>
+        )}
+        {countdown !== null && <div key={`rhythm-countdown-${countdown}`} className="sort-countdown">{countdown > 0 ? countdown : "START"}</div>}
+        <div className="stage-lights"><i /><i /><i /></div>
+        <div className="rhythm-lanes stage-rhythm-lanes">
+          {roles.map((role, lane) => <div className="rhythm-lane stage-rhythm-lane" key={role.icon}>
+            {activeNotes.filter((note) => note.lane === lane).map((note) => {
+              const y = Math.min(96, Math.max(0, ((elapsed - note.spawnAt) / travelMs) * 76));
+              return <div className="falling-note stage-note" key={note.id} style={{ top: `${y}%` }}><MiniAssetIcon token={note.token} /></div>;
+            })}
+            <div className="rhythm-hit-line" />
+          </div>)}
+        </div>
+        {done && <div className="sort-complete-panel"><b>공연 준비 완료!</b><button className="primary" onClick={onComplete}>카드 받기</button></div>}
       </div>
-      <div className="role-buttons">{roles.map((role, lane) => <button key={role.icon} onClick={() => hitLane(lane)}><MiniAssetIcon token={role.icon} /><small>{role.key} · {role.label}</small></button>)}</div>
+      <div className="role-buttons stage-role-buttons">{roles.map((role, lane) => <button key={role.icon} onClick={() => hitLane(lane)}><MiniAssetIcon token={role.icon} /><small>{role.key} · {role.label}</small></button>)}</div>
       {finished && !done && <button className="secondary" onClick={reset}>다시 도전</button>}
     </div>
-  </MiniFrame>;
+  </div>;
 }
 
 function PhotoTimingGame({ job, onComplete }) {
@@ -556,6 +1205,180 @@ function PhotoTimingGame({ job, onComplete }) {
   return <MiniFrame job={job} progress={(shots.filter(Boolean).length / 2) * 100} done={done} onComplete={onComplete} message={done ? "선명한 사진을 골랐어요!" : "활짝 웃는 순간에 셔터를 눌러요."}>
     <div className="photo-zone"><div className="photo-frame"><MiniAssetIcon id="photo-frame" className="photo-frame-prop" /><MiniAssetIcon token={pose} className="photo-subject" /></div><button className="primary" onClick={() => setShots((value) => [...value, good])}><MiniAssetIcon id="shutter-button" />찰칵!</button><div className="shot-strip">{shots.map((shot, i) => <i key={i}><MiniAssetIcon id={shot ? "smile-target" : "camera"} /></i>)}</div></div>
   </MiniFrame>;
+}
+
+function ConveyorSortGame({ job, onComplete }) {
+  const lanes = job.config.lanes;
+  const beatMs = job.config.beatMs ?? 1100;
+  const travelMs = job.config.travelMs ?? 1800;
+  const hitWindowMs = job.config.hitWindowMs ?? 270;
+  const targetHits = job.config.targetHits ?? Math.ceil(job.config.parcels.length * 0.7);
+  const chart = useMemo(() => job.config.parcels.map((laneId, index) => {
+    const lane = Math.max(0, lanes.findIndex((item) => item.id === laneId));
+    const hitAt = 900 + index * beatMs;
+    return { id: `${laneId}-${index}`, lane, spawnAt: hitAt - travelMs, hitAt };
+  }), [beatMs, job.config.parcels, lanes, travelMs]);
+  const [showGuide, setShowGuide] = useState(true);
+  const [countdown, setCountdown] = useState(null);
+  const [startedAt, setStartedAt] = useState(() => performance.now());
+  const [elapsed, setElapsed] = useState(0);
+  const [judgements, setJudgements] = useState({});
+  const [hits, setHits] = useState(0);
+  const [misses, setMisses] = useState(0);
+  const [combo, setCombo] = useState(0);
+  const [feedback, setFeedback] = useState(null);
+  const finished = elapsed > chart[chart.length - 1].hitAt + 760;
+  const done = finished && hits >= targetHits;
+  const reset = () => {
+    setStartedAt(performance.now());
+    setElapsed(0);
+    setJudgements({});
+    setHits(0);
+    setMisses(0);
+    setCombo(0);
+    setFeedback(null);
+    setCountdown(3);
+    setShowGuide(false);
+  };
+
+  useEffect(() => {
+    if (showGuide || countdown !== null) return undefined;
+    let frame = 0;
+    const tick = () => {
+      setElapsed(performance.now() - startedAt);
+      frame = window.requestAnimationFrame(tick);
+    };
+    frame = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(frame);
+  }, [countdown, showGuide, startedAt]);
+
+  useEffect(() => {
+    if (countdown === null) return undefined;
+    if (countdown <= 0) {
+      setStartedAt(performance.now());
+      setElapsed(0);
+      setCountdown(null);
+      return undefined;
+    }
+    const timer = window.setTimeout(() => setCountdown((value) => value - 1), 760);
+    return () => window.clearTimeout(timer);
+  }, [countdown]);
+
+  useEffect(() => {
+    chart.forEach((parcel) => {
+      if (judgements[parcel.id] || elapsed <= parcel.hitAt + hitWindowMs) return;
+      setJudgements((value) => value[parcel.id] ? value : { ...value, [parcel.id]: "miss" });
+      setMisses((value) => value + 1);
+      setCombo(0);
+      setFeedback({ id: `${parcel.id}-miss`, text: "Miss", kind: "miss" });
+    });
+  }, [chart, elapsed, hitWindowMs, judgements]);
+
+  const hitLane = useCallback((lane) => {
+    if (showGuide || countdown !== null) return;
+    if (done || finished) return;
+    const parcel = chart
+      .filter((item) => !judgements[item.id])
+      .map((item) => ({ ...item, diff: Math.abs(elapsed - item.hitAt) }))
+      .filter((item) => item.diff <= hitWindowMs)
+      .sort((a, b) => a.diff - b.diff)[0];
+    if (!parcel) {
+      setMisses((value) => value + 1);
+      setCombo(0);
+      setFeedback({ id: `early-${elapsed}`, text: "Too early", kind: "miss" });
+      return;
+    }
+    if (parcel.lane !== lane) {
+      setJudgements((value) => ({ ...value, [parcel.id]: "wrong" }));
+      setMisses((value) => value + 1);
+      setCombo(0);
+      setFeedback({ id: `${parcel.id}-wrong`, text: "Wrong", kind: "wrong" });
+      return;
+    }
+    const grade = parcel.diff < 90 ? "Perfect" : parcel.diff < 180 ? "Good" : "Ok";
+    setJudgements((value) => ({ ...value, [parcel.id]: grade.toLowerCase() }));
+    setHits((value) => value + 1);
+    setCombo((value) => value + 1);
+    setFeedback({ id: `${parcel.id}-${grade}`, text: grade, kind: "hit" });
+  }, [chart, countdown, done, elapsed, finished, hitWindowMs, judgements, showGuide]);
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      const lane = lanes.findIndex((item) => item.keys?.includes(event.code));
+      if (lane < 0) return;
+      event.preventDefault();
+      hitLane(lane);
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [hitLane, lanes]);
+
+  const activeParcels = chart.filter((parcel) => (
+    elapsed >= parcel.spawnAt &&
+    elapsed <= parcel.hitAt + hitWindowMs &&
+    !judgements[parcel.id]
+  ));
+
+  return <div className="phaser-like-minigame alba-minigame conveyor-fullscreen-minigame">
+    <div className="conveyor-sort-zone">
+      <div className="conveyor-arena">
+        <div className="conveyor-scoreboard">
+          <b>{hits}/{targetHits}</b>
+          <span>Combo {combo}</span>
+          <small>Miss {misses}</small>
+        </div>
+        {feedback && <div key={feedback.id} className={`sort-feedback-bubble ${feedback.kind}`}>{feedback.text}</div>}
+        {showGuide && (
+          <div className="sort-guide-dialog">
+            <div className="guide-portrait">📦</div>
+            <div>
+              <b>택배 분류 방법</b>
+              <p>상자 위 목적지 표지를 보고, 상자가 노란 분기점에 닿는 순간 아래 버튼이나 방향키를 눌러요.</p>
+              <button
+                className="primary"
+                onClick={() => {
+                  setElapsed(0);
+                  setShowGuide(false);
+                  setCountdown(3);
+                }}
+              >
+                시작
+              </button>
+            </div>
+          </div>
+        )}
+        {countdown !== null && <div key={`countdown-${countdown}`} className="sort-countdown">{countdown > 0 ? countdown : "START"}</div>}
+        <div className="lane-button-row">
+          {lanes.map((lane, index) => (
+            <button
+              key={lane.id}
+              className={`lane-hit-button ${lane.direction}`}
+              onClick={() => hitLane(index)}
+            >
+              <b>{lane.key}</b>
+              <img src={parcelLabelImages[lane.id]} alt="" draggable="false" />
+              <small>{lane.label}</small>
+            </button>
+          ))}
+        </div>
+        <div className="conveyor-belt">
+          {activeParcels.map((parcel) => {
+            const lane = lanes[parcel.lane];
+            const travel = clamp((elapsed - parcel.spawnAt) / travelMs, 0, 1);
+            const left = 8 + travel * 42;
+            const urgent = parcel.hitAt - elapsed < 420;
+            return <div className={`parcel-box ${urgent ? "urgent" : ""}`} key={parcel.id} style={{ left: `${left}%` }}>
+              <MiniAssetIcon id="delivery-bag" />
+              <img className="parcel-destination-label" src={parcelLabelImages[lane.id]} alt={lane.label} draggable="false" />
+            </div>;
+          })}
+          <div className="sort-gate"><span>분기점</span></div>
+        </div>
+        {done && <div className="sort-complete-panel"><b>분류 완료!</b><button className="primary" onClick={onComplete}>카드 받기</button></div>}
+      </div>
+      {finished && !done && <button className="secondary" onClick={reset}>다시 도전</button>}
+    </div>
+  </div>;
 }
 
 function DeliveryGridGame({ job, onComplete }) {
@@ -577,13 +1400,77 @@ function DeliveryGridGame({ job, onComplete }) {
 }
 
 function SequenceBuildGame({ job, onComplete }) {
-  const [step, setStep] = useState(0);
+  const slots = job.config.slots;
+  const parts = job.config.parts;
+  const prefilledPlaced = useMemo(() => Object.fromEntries((job.config.prefilled ?? []).map((id) => [id, id])), [job.config.prefilled]);
+  const [placed, setPlaced] = useState(prefilledPlaced);
+  const [selectedPart, setSelectedPart] = useState(null);
   const [wrong, setWrong] = useState(0);
-  const done = step >= job.config.steps.length;
-  return <MiniFrame job={job} progress={(step / job.config.steps.length) * 100} done={done} onComplete={onComplete} message={done ? "로봇이 켜졌어요!" : `순서대로 조립해요. 실수 ${wrong}번`}>
-    <div className="sequence-build-zone"><div className="robot-preview">{job.config.steps.slice(0, step).map((part) => <MiniAssetIcon key={part.id} id={getMiniAssetForPart(part)} />)}{step === 0 && <MiniAssetIcon id="circuit-panel" />}</div><div className="part-tray">{job.config.steps.map((part, index) => <button key={part.id} className={index < step ? "filled" : ""} onClick={() => { if (index === step) setStep((value) => value + 1); else setWrong((value) => value + 1); }}><MiniAssetIcon id={getMiniAssetForPart(part)} /><small>{part.label}</small></button>)}</div></div>
-  </MiniFrame>;
+  const [feedback, setFeedback] = useState(null);
+  const done = slots.every((slot) => placed[slot.id] === slot.id);
+  const progress = Math.round((Object.keys(placed).length / slots.length) * 100);
+
+  const placePart = (partId, slotId) => {
+    if (done || placed[slotId]) return;
+    if (partId === slotId) {
+      setPlaced((value) => ({ ...value, [slotId]: partId }));
+      setFeedback({ id: `robot-hit-${slotId}-${performance.now()}`, text: "장착!", kind: "hit" });
+    } else {
+      setWrong((value) => value + 1);
+      setFeedback({ id: `robot-miss-${slotId}-${performance.now()}`, text: "위치가 달라요", kind: "wrong" });
+    }
+    setSelectedPart(null);
+  };
+
+  return <div className="phaser-like-minigame alba-minigame robot-assembly-minigame">
+    <div className="robot-workbench">
+      <div className="robot-scoreboard"><b>{progress}%</b><span>실수 {wrong}</span></div>
+      {feedback && <div key={feedback.id} className={`sort-feedback-bubble ${feedback.kind}`}>{feedback.text}</div>}
+      <div className={`robot-assembly-board ${done ? "complete" : ""}`}>
+        <div className="robot-silhouette" />
+        {slots.map((slot) => {
+          const placedPart = parts.find((part) => part.id === placed[slot.id]);
+          return <button
+            key={slot.id}
+            className={`robot-slot ${slot.id} ${placedPart ? "filled" : ""}`}
+            style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
+            onClick={() => selectedPart && placePart(selectedPart, slot.id)}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => {
+              event.preventDefault();
+              placePart(event.dataTransfer.getData("text/robot-part"), slot.id);
+            }}
+          >
+            {placedPart ? <MiniAssetIcon id={getMiniAssetForPart(placedPart)} /> : <span>{slot.label}</span>}
+          </button>;
+        })}
+        {done && <MiniAssetIcon id="spark-plug" className="robot-spark" />}
+      </div>
+      {done && <div className="sort-complete-panel"><b>로봇 조립 완료!</b><button className="primary" onClick={onComplete}>카드 받기</button></div>}
+    </div>
+    <div className="robot-part-dock">
+      {parts.map((part) => {
+        const used = Object.values(placed).includes(part.id);
+        const prefilled = (job.config.prefilled ?? []).includes(part.id);
+        return <button
+          key={part.id}
+          className={`${selectedPart === part.id ? "selected" : ""} ${used ? "used" : ""} ${prefilled ? "prefilled" : ""}`}
+          disabled={used}
+          draggable={!used}
+          onClick={() => !used && setSelectedPart((value) => value === part.id ? null : part.id)}
+          onDragStart={(event) => {
+            event.dataTransfer.setData("text/robot-part", part.id);
+            setSelectedPart(part.id);
+          }}
+        >
+          <MiniAssetIcon id={getMiniAssetForPart(part)} />
+          <small>{part.label}</small>
+        </button>;
+      })}
+    </div>
+  </div>;
 }
+
 
 
 

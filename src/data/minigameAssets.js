@@ -10,10 +10,16 @@ export const minigameAssets = Object.fromEntries(
 const commonTokenAssets = {
   "🐕": "pet-dog",
   "🐈": "pet-cat",
+  "🐇": "pet-rabbit",
+  "🐶": "pet-puppy",
   "🦴": "pet-bone",
   "🥣": "water-bowl",
   "🪮": "pet-brush",
   "🧸": "toy-ball",
+  "💗": "pet-heart",
+  "🫧": "pet-bath",
+  "🛏️": "pet-bed",
+  "📷": "pet-camera",
   "🔴": "button-red",
   "🕹️": "arcade-lever",
   "💡": "stage-light",
@@ -36,15 +42,20 @@ const orderTokenAssets = {
     "🍄": "pizza-mushroom",
     "🫒": "pizza-olive",
     "🌽": "pizza-corn",
-    "🍅": "pizza-tomato"
+    "🍅": "pizza-tomato",
+    "🥓": "pizza-pepperoni",
+    "🌿": "pizza-basil",
+    "🧅": "pizza-onion"
   },
   "icecream-job": {
     "🥄": "icecream-cup",
-    "🍦": "scoop-vanilla",
+    "🍦": "icecream-cone",
     "🍓": "scoop-strawberry",
     "🍫": "scoop-chocolate",
     "🍪": "cookie-topping",
-    "🍒": "cherry-topping"
+    "🍒": "cherry-topping",
+    "🍯": "caramel-syrup",
+    "🍨": "scoop-vanilla"
   }
 };
 
@@ -63,11 +74,21 @@ export function getMiniAssetForPart(part) {
     body: "robot-body",
     head: "robot-head",
     wheel: "robot-wheel",
+    leftWheel: "robot-wheel-left",
+    rightWheel: "robot-wheel-right",
+    battery: "battery",
     power: "battery",
+    antenna: "robot-antenna",
+    circuit: "circuit-panel",
+    spark: "spark-plug",
     snack: "pet-bone",
     water: "water-bowl",
     brush: "pet-brush",
-    toy: "toy-ball"
+    toy: "toy-ball",
+    cuddle: "pet-heart",
+    bath: "pet-bath",
+    bed: "pet-bed",
+    photo: "pet-camera"
   };
 
   return partAssets[part?.id] ?? getMiniAssetForToken(part?.icon);
