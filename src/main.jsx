@@ -1,9 +1,10 @@
 ﻿import { useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
-import { consumptions, jobs, playerCharacter, uniqueCards } from "./data/alba.js";
+import { consumptions, jobs, playerCharacter, playerCharacters, uniqueCards } from "./data/alba.js";
 import { GamePage } from "./react/GamePage.jsx";
 import { StartScreen } from "./react/StartScreen.jsx";
+import { CharacterSelect } from "./react/CharacterSelect.jsx";
 import { QuizScreen } from "./react/QuizScreen.jsx";
 import { ResultScreen } from "./react/ResultScreen.jsx";
 
@@ -22,6 +23,7 @@ const initialProgress = {
 function App() {
   const [screen, setScreen] = useState("start");
   const [progress, setProgress] = useState(initialProgress);
+  const [selectedCharacter, setSelectedCharacter] = useState(playerCharacter);
   const [toast, setToast] = useState("");
   const [pendingActivity, setPendingActivity] = useState(null);
 
@@ -29,7 +31,8 @@ function App() {
   const completedConsumptionCount = progress.completedConsumptions.length;
   const canFinish = progress.cards.length >= 5 && completedJobCount >= 3 && completedConsumptionCount >= 2;
 
-  const resetDay = () => {
+  const resetDay = (character = selectedCharacter) => {
+    setSelectedCharacter(character);
     setProgress(initialProgress);
     setToast("");
     setPendingActivity(null);
@@ -88,12 +91,20 @@ function App() {
 
   return (
     <>
-      {screen === "start" && <StartScreen onStart={resetDay} />}
+      {screen === "start" && <StartScreen onStart={() => setScreen("character")} />}
+      {screen === "character" && (
+        <CharacterSelect
+          characters={playerCharacters}
+          onBack={() => setScreen("start")}
+          onPick={(characterId) => resetDay(playerCharacters.find((character) => character.id === characterId) ?? playerCharacter)}
+        />
+      )}
       {screen === "game" && (
         <GamePage
-          playerCharacter={playerCharacter}
+          playerCharacter={selectedCharacter}
           progress={progress}
           canFinish={canFinish}
+          inputLocked={Boolean(pendingActivity)}
           jobMap={jobMap}
           consumptionMap={consumptionMap}
           onCompleteJob={queueJobReward}
@@ -111,7 +122,7 @@ function App() {
       )}
       {screen === "result" && (
         <ResultScreen
-          character={playerCharacter}
+          character={selectedCharacter}
           progress={progress}
           jobMap={jobMap}
           consumptionMap={consumptionMap}

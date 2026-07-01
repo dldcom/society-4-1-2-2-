@@ -1,7 +1,6 @@
 ﻿import Phaser from "phaser";
 import { assetUrls } from "../assets.js";
 import { WORLD, collisions, places } from "../../data/world.js";
-import { buildItemCollisionAreas, buildTileCollisionAreas, tileLookup, townItems, townTileMap } from "../../data/townTileMap.js";
 
 const touchInput = { up: false, down: false, left: false, right: false };
 
@@ -10,22 +9,24 @@ export class TownScene extends Phaser.Scene {
     super("TownScene");
     this.player = null;
     this.playerSprite = null;
-    this.playerIcon = null;
+    this.playerSpriteConfig = null;
+    this.playerAnimPrefix = "player";
     this.questMarker = null;
-    this.itemCollisions = [];
-    this.tileCollisions = [];
+    this.npcSprites = new Map();
+    this.interactionLockedUntil = 0;
+    this.lastInputLocked = false;
+    this.lastActivePlaceId = null;
     this.lastNearId = "";
     this.lastDir = "down";
   }
 
   preload() {
-    this.load.spritesheet("cozy-town-tileset", assetUrls.tilesets.cozyTown, {
-      frameWidth: 32,
-      frameHeight: 32
-    });
-    this.load.spritesheet("player-cat", assetUrls.player, {
-      frameWidth: 192,
-      frameHeight: 192
+    this.load.image("base-town-map", assetUrls.maps.baseTown);
+    Object.entries(assetUrls.players).forEach(([key, url]) => {
+      const size = key === "player-cat"
+        ? { frameWidth: 192, frameHeight: 192 }
+        : { frameWidth: 48, frameHeight: 64 };
+      this.load.spritesheet(key, url, size);
     });
     this.load.spritesheet("town-npcs", assetUrls.npcs, {
       frameWidth: 64,
@@ -34,23 +35,16 @@ export class TownScene extends Phaser.Scene {
     Object.entries(assetUrls.buildings).forEach(([key, url]) => {
       this.load.image(`building-${key}`, url);
     });
-    Object.entries(assetUrls.townItems).forEach(([key, url]) => {
-      this.load.image(`town-item-${key}`, url);
-    });
   }
 
   create() {
     this.bridge = this.game.registry.get("bridge");
     this.cameras.main.setBounds(0, 0, WORLD.width, WORLD.height);
-    this.itemCollisions = buildItemCollisionAreas();
-    this.tileCollisions = buildTileCollisionAreas();
-
-    this.renderTileMap();
-    this.renderTownItems();
+    this.renderBaseMap();
     places.forEach((place) => this.addPlace(place));
     places.forEach((place) => this.addNpc(place));
-    this.createPlayerAnimations();
     this.createPlayer();
+    this.createPlayerAnimations();
 
     this.questMarker = this.add.text(0, 0, "★", {
       fontFamily: "Arial",
@@ -107,10 +101,16 @@ export class TownScene extends Phaser.Scene {
     if (!npc) return;
     const x = place.x + Math.min(96, place.w * 0.28);
     const y = place.y + 18;
+    const idleFrame = (npc.sprite ?? 0) * 2;
     const shadow = this.add.ellipse(x, y + 24, 42, 14, 0x000000, 0.2).setDepth(y - 1);
-    const sprite = this.add.sprite(x, y - 18, "town-npcs", npc.sprite ?? 0);
+    const sprite = this.add.sprite(x, y - 18, "town-npcs", idleFrame);
     sprite.setDisplaySize(64, 96);
     sprite.setDepth(y + 1);
+    this.npcSprites.set(place.id, {
+      sprite,
+      idleFrame,
+      talkingFrame: idleFrame + 1
+    });
     this.tweens.add({ targets: sprite, y: y - 21, duration: 900 + ((npc.sprite ?? 0) * 70), yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
     this.add.text(x, y + 42, npc.name, {
       fontFamily: "Arial",
@@ -123,79 +123,63 @@ export class TownScene extends Phaser.Scene {
   }
   createPlayer() {
     const state = this.bridge.getState();
-    const character = state.playerCharacter ?? { icon: "😺" };
+    const character = state.playerCharacter ?? {};
+    this.playerSpriteConfig = character.sprite ?? {
+      key: "player-cat",
+      displayWidth: 104,
+      displayHeight: 104,
+      offsetY: -14,
+      idle: { down: 0, left: 4, right: 8, up: 12 },
+      walk: { down: [0, 3], left: [4, 7], right: [8, 11], up: [12, 15] }
+    };
+    this.playerAnimPrefix = this.playerSpriteConfig.key;
     this.player = this.add.container(WORLD.width * 0.5, WORLD.height * 0.58);
     const shadow = this.add.ellipse(0, 32, 58, 20, 0x000000, 0.22);
-    this.playerSprite = this.add.sprite(0, -14, "player-cat", 0);
-    this.playerSprite.setDisplaySize(104, 104);
-    this.playerIcon = this.add.text(34, -46, character.icon, {
-      fontFamily: "Arial",
-      fontSize: "20px",
-      backgroundColor: "#fff8df",
-      padding: { x: 5, y: 2 }
-    }).setOrigin(0.5).setDepth(2);
-    this.player.add([shadow, this.playerSprite, this.playerIcon]);
+    this.playerSprite = this.add.sprite(0, this.playerSpriteConfig.offsetY ?? -14, this.playerSpriteConfig.key, this.playerSpriteConfig.idle?.down ?? 0);
+    this.playerSprite.setDisplaySize(this.playerSpriteConfig.displayWidth ?? 104, this.playerSpriteConfig.displayHeight ?? 104);
+    this.player.add([shadow, this.playerSprite]);
     this.player.setDepth(3000);
   }
 
-  renderTileMap() {
-    const tileSize = townTileMap.tileSize;
-    const scaleX = WORLD.width / (townTileMap.cols * tileSize);
-    const scaleY = WORLD.height / (townTileMap.rows * tileSize);
-    const scale = Math.min(scaleX, scaleY);
-    const offsetX = (WORLD.width - townTileMap.cols * tileSize * scale) / 2;
-    const offsetY = (WORLD.height - townTileMap.rows * tileSize * scale) / 2;
-    const layer = townTileMap.layers.find((item) => item.id === "ground");
-    if (!layer) return;
-
-    layer.data.forEach((row, rowIndex) => {
-      row.forEach((tileId, colIndex) => {
-        const tile = tileLookup[tileId];
-        if (!tile) return;
-        const sprite = this.add.image(
-          offsetX + (colIndex + 0.5) * tileSize * scale,
-          offsetY + (rowIndex + 0.5) * tileSize * scale,
-          "cozy-town-tileset",
-          tile.index
-        );
-        sprite.setDisplaySize(tileSize * scale, tileSize * scale);
-        sprite.setDepth(0);
-      });
-    });
+  renderBaseMap() {
+    this.add.image(WORLD.width / 2, WORLD.height / 2, "base-town-map")
+      .setDisplaySize(WORLD.width, WORLD.height)
+      .setDepth(0);
   }
-
-  renderTownItems() {
-    townItems.forEach((item) => {
-      const sprite = this.add.image(item.x, item.y, `town-item-${item.itemId}`);
-      sprite.setOrigin(0.5, 1);
-      sprite.setDisplaySize(item.w, item.h);
-      sprite.setDepth(item.y);
-    });
-  }
-
   createPlayerAnimations() {
+    const config = this.playerSpriteConfig;
+    if (!config?.walk || !config.key) return;
     const create = (key, start, end) => {
       if (this.anims.exists(key)) return;
       this.anims.create({
         key,
-        frames: this.anims.generateFrameNumbers("player-cat", { start, end }),
+        frames: this.anims.generateFrameNumbers(config.key, { start, end }),
         frameRate: 7,
         repeat: -1
       });
     };
-    create("cat-walk-down", 0, 3);
-    create("cat-walk-left", 4, 7);
-    create("cat-walk-right", 8, 11);
-    create("cat-walk-up", 12, 15);
+    Object.entries(config.walk).forEach(([dir, range]) => {
+      create(`${this.playerAnimPrefix}-walk-${dir}`, range[0], range[1]);
+    });
   }
 
   update(_time, deltaMs) {
     const state = this.bridge.getState();
-    const playerIcon = state.playerCharacter?.icon ?? "😺";
-    if (this.playerIcon.text !== playerIcon) this.playerIcon.setText(playerIcon);
+    const activePlaceId = state.activePlaceId ?? null;
+    const inputLocked = Boolean(state.inputLocked || activePlaceId);
+    if ((this.lastActivePlaceId && !activePlaceId) || (this.lastInputLocked && !inputLocked)) {
+      this.interactionLockedUntil = this.time.now + 350;
+      this.input.keyboard.resetKeys();
+      Object.keys(touchInput).forEach((dir) => {
+        touchInput[dir] = false;
+      });
+    }
+    this.lastActivePlaceId = activePlaceId;
+    this.lastInputLocked = inputLocked;
 
-    const movement = this.movePlayer(deltaMs);
+    const movement = inputLocked ? null : this.movePlayer(deltaMs);
     this.updatePlayerAnimation(movement);
+    this.updateNpcTalkingState(activePlaceId);
     this.player.setDepth(this.player.y + 50);
 
     const nearPlace = this.findNearestActionPlace(state.actionPlaceIds ?? []);
@@ -212,7 +196,13 @@ export class TownScene extends Phaser.Scene {
       this.questMarker.setVisible(false);
     }
 
-    if (nearPlace && Phaser.Input.Keyboard.JustDown(this.keys.interact)) {
+    if (
+      !activePlaceId &&
+      !inputLocked &&
+      this.time.now >= this.interactionLockedUntil &&
+      nearPlace &&
+      Phaser.Input.Keyboard.JustDown(this.keys.interact)
+    ) {
       this.bridge.onInteract(nearPlace);
     }
   }
@@ -259,19 +249,28 @@ export class TownScene extends Phaser.Scene {
     if (!this.playerSprite) return;
     if (!dir) {
       this.playerSprite.anims.stop();
-      const idleFrame = { down: 0, left: 4, right: 8, up: 12 }[this.lastDir] ?? 0;
+      const idleFrame = this.playerSpriteConfig?.idle?.[this.lastDir] ?? 0;
       this.playerSprite.setFrame(idleFrame);
       return;
     }
     this.lastDir = dir;
-    const key = `cat-walk-${dir}`;
+    const key = `${this.playerAnimPrefix}-walk-${dir}`;
     if (this.playerSprite.anims.currentAnim?.key !== key) {
       this.playerSprite.play(key, true);
     }
   }
 
+  updateNpcTalkingState(activePlaceId) {
+    this.npcSprites.forEach((entry, placeId) => {
+      const nextFrame = activePlaceId === placeId ? entry.talkingFrame : entry.idleFrame;
+      if (String(entry.sprite.frame.name) !== String(nextFrame)) {
+        entry.sprite.setFrame(nextFrame);
+      }
+    });
+  }
+
   collides(x, y) {
-    return [...collisions, ...this.tileCollisions, ...this.itemCollisions].some((rect) => (
+    return collisions.some((rect) => (
       x > rect.x - rect.w / 2 &&
       x < rect.x + rect.w / 2 &&
       y > rect.y - rect.h / 2 &&
@@ -279,5 +278,8 @@ export class TownScene extends Phaser.Scene {
     ));
   }
 }
+
+
+
 
 

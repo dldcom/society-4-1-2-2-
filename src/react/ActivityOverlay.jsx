@@ -1,5 +1,6 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import { getConsumptionsAtPlace, getJobsAtPlace } from "../data/alba.js";
+import { getMiniAsset, getMiniAssetForPart, getMiniAssetForToken, getMiniAssetForWire } from "../data/minigameAssets.js";
 
 export function ActivityOverlay({ place, progress, onClose, onCompleteJob, onBuyConsumption }) {
   const jobs = useMemo(() => getJobsAtPlace(place.id), [place.id]);
@@ -7,7 +8,59 @@ export function ActivityOverlay({ place, progress, onClose, onCompleteJob, onBuy
   const [activeJob, setActiveJob] = useState(null);
   const [mode, setMode] = useState("talk");
   const [message, setMessage] = useState("");
+  const [dialogComplete, setDialogComplete] = useState(false);
+  const [selectedChoice, setSelectedChoice] = useState(0);
   const npc = place.npc ?? { name: `${place.name} 주인`, role: "동네 주민", portrait: "🙂", greeting: "어서 와. 무슨 일로 들렀어?" };
+
+  const askJob = useCallback(() => {
+    setMode("jobs");
+    setMessage(jobs.length ? npc.jobLine ?? "마침 부탁할 일이 하나 있어. 해 볼래?" : npc.noJobLine ?? "오늘은 맡길 일이 없네. 다른 가게도 한번 들러 봐.");
+  }, [jobs.length, npc.jobLine, npc.noJobLine]);
+
+  const askShop = useCallback(() => {
+    setMode("shop");
+    setMessage(consumptions.length ? npc.shopLine ?? "좋아. 천천히 둘러보고 마음에 드는 걸 골라 봐." : npc.noShopLine ?? "지금은 팔 만한 게 없어. 그래도 들러 줘서 고마워.");
+  }, [consumptions.length, npc.noShopLine, npc.shopLine]);
+
+  const choices = useMemo(() => [
+    { label: "알바를 하고 싶어요", variant: "primary", action: askJob },
+    { label: "물건을 사고 싶어요", variant: "secondary", action: askShop },
+    { label: "아무 일도 아니에요", variant: "ghost", action: onClose }
+  ], [askJob, askShop, onClose]);
+
+  const runSelectedChoice = useCallback(() => {
+    choices[selectedChoice]?.action();
+  }, [choices, selectedChoice]);
+
+  const buy = (item) => {
+    const queued = onBuyConsumption(item);
+    if (queued) onClose();
+    else setMessage("앗, 코인이 조금 모자라. 알바를 하나 하고 다시 와 볼래?");
+  };
+
+  const line = message || npc.greeting || "어서 와. 무슨 일로 들렀어?";
+  const dialogLines = useMemo(() => splitDialogLines(line), [line]);
+
+  useEffect(() => {
+    setDialogComplete(false);
+    setSelectedChoice(0);
+  }, [dialogLines]);
+
+  useEffect(() => {
+    if (mode !== "talk" || !dialogComplete) return undefined;
+    const onKeyDown = (event) => {
+      if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Enter", "Space"].includes(event.code)) return;
+      event.preventDefault();
+      if (event.code === "Enter" || event.code === "Space") {
+        runSelectedChoice();
+        return;
+      }
+      const dir = event.code === "ArrowUp" || event.code === "ArrowLeft" ? -1 : 1;
+      setSelectedChoice((index) => (index + dir + choices.length) % choices.length);
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [choices.length, dialogComplete, mode, runSelectedChoice]);
 
   if (activeJob) {
     return (
@@ -32,48 +85,52 @@ export function ActivityOverlay({ place, progress, onClose, onCompleteJob, onBuy
     );
   }
 
-  const askJob = () => {
-    setMode("jobs");
-    setMessage(jobs.length ? npc.jobLine ?? "마침 부탁할 일이 하나 있어. 해 볼래?" : npc.noJobLine ?? "오늘은 맡길 일이 없네. 다른 가게도 한번 들러 봐.");
-  };
-
-  const askShop = () => {
-    setMode("shop");
-    setMessage(consumptions.length ? npc.shopLine ?? "좋아. 천천히 둘러보고 마음에 드는 걸 골라 봐." : npc.noShopLine ?? "지금은 팔 만한 게 없어. 그래도 들러 줘서 고마워.");
-  };
-
-  const buy = (item) => {
-    const queued = onBuyConsumption(item);
-    if (queued) onClose();
-    else setMessage("앗, 코인이 조금 모자라. 알바를 하나 하고 다시 와 볼래?");
-  };
-
-  const line = message || npc.greeting || "어서 와. 무슨 일로 들렀어?";
-
   return (
     <div className="overlay npc-rpg-overlay">
       <div className="npc-rpg-layer">
         <button className="icon-button npc-close-button" onClick={onClose}>X</button>
 
-        {mode === "talk" && (
+        {mode === "talk" && dialogComplete && (
           <div className="npc-choice-panel npc-choice-compact">
             {place.id === "board" && <div className="board-note npc-board-note"><b>오늘의 목표</b><span>알바로 생산 활동을 경험하고, 번 코인으로 소비 활동도 해 봐요.</span></div>}
-            <button className="primary" onClick={askJob}>알바할 거리가 있나요?</button>
-            <button className="secondary" onClick={askShop}>물건을 사러 왔어요</button>
+            {choices.map((choice, index) => (
+              <button
+                className={`${choice.variant} ${selectedChoice === index ? "selected" : ""}`}
+                key={choice.label}
+                onClick={choice.action}
+                onMouseEnter={() => setSelectedChoice(index)}
+              >
+                {choice.label}
+              </button>
+            ))}
           </div>
         )}
 
-        {mode === "jobs" && (
+        {mode === "jobs" && dialogComplete && (
           <div className="npc-choice-panel npc-activity-panel">
-            <div className="npc-panel-head"><b>알바할 거리</b><button className="ghost" onClick={() => setMode("talk")}>돌아가기</button></div>
-            <ActivityList jobs={jobs} consumptions={[]} progress={progress} onStartJob={setActiveJob} onBuy={buy} />
+            <ActivityList
+              jobs={jobs}
+              consumptions={[]}
+              progress={progress}
+              title="알바할 거리"
+              onBack={() => setMode("talk")}
+              onStartJob={setActiveJob}
+              onBuy={buy}
+            />
           </div>
         )}
 
-        {mode === "shop" && (
+        {mode === "shop" && dialogComplete && (
           <div className="npc-choice-panel npc-activity-panel">
-            <div className="npc-panel-head"><b>살 수 있는 것</b><button className="ghost" onClick={() => setMode("talk")}>돌아가기</button></div>
-            <ActivityList jobs={[]} consumptions={consumptions} progress={progress} onStartJob={setActiveJob} onBuy={buy} />
+            <ActivityList
+              jobs={[]}
+              consumptions={consumptions}
+              progress={progress}
+              title="살 수 있는 것"
+              onBack={() => setMode("talk")}
+              onStartJob={setActiveJob}
+              onBuy={buy}
+            />
           </div>
         )}
 
@@ -83,7 +140,7 @@ export function ActivityOverlay({ place, progress, onClose, onCompleteJob, onBuy
           </div>
           <div className="npc-dialog-text">
             <div className="npc-nameplate"><b>{npc.name}</b><span>{npc.role}</span></div>
-            <p>{line}</p>
+            <TypewriterDialog lines={dialogLines} onCompleteChange={setDialogComplete} />
           </div>
         </section>
       </div>
@@ -91,12 +148,125 @@ export function ActivityOverlay({ place, progress, onClose, onCompleteJob, onBuy
   );
 }
 
-function ActivityList({ jobs, consumptions, progress, onStartJob, onBuy }) {
+function splitDialogLines(line) {
+  if (Array.isArray(line)) return line.filter(Boolean);
+  return String(line ?? "")
+    .split(/\n+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function TypewriterDialog({ lines, onCompleteChange }) {
+  const [lineIndex, setLineIndex] = useState(0);
+  const [visibleCount, setVisibleCount] = useState(0);
+  const currentLine = lines[lineIndex] ?? "";
+  const isTyping = visibleCount < currentLine.length;
+
+  useEffect(() => {
+    setLineIndex(0);
+    setVisibleCount(0);
+    onCompleteChange?.(false);
+  }, [lines, onCompleteChange]);
+
+  useEffect(() => {
+    onCompleteChange?.(!isTyping && lineIndex >= lines.length - 1);
+  }, [isTyping, lineIndex, lines.length, onCompleteChange]);
+
+  useEffect(() => {
+    if (!currentLine || !isTyping) return undefined;
+    const timer = window.setTimeout(() => {
+      setVisibleCount((count) => Math.min(currentLine.length, count + 1));
+    }, 24);
+    return () => window.clearTimeout(timer);
+  }, [currentLine, isTyping, visibleCount]);
+
+  const advance = () => {
+    if (isTyping) {
+      setVisibleCount(currentLine.length);
+      return;
+    }
+    if (lineIndex < lines.length - 1) {
+      setLineIndex((index) => index + 1);
+      setVisibleCount(0);
+    }
+  };
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.code !== "Space") return;
+      const overlay = document.querySelector(".npc-rpg-overlay");
+      if (!overlay) return;
+      if (!isTyping && lineIndex >= lines.length - 1) return;
+      event.preventDefault();
+      advance();
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  });
+
+  return (
+    <p className="typewriter-line" onClick={advance}>
+      {currentLine.slice(0, visibleCount)}
+      {isTyping && <span className="typewriter-caret" aria-hidden="true">▌</span>}
+    </p>
+  );
+}
+function ActivityList({ jobs, consumptions, progress, title, onBack, onStartJob, onBuy }) {
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const entries = useMemo(() => [
+    { id: "back", type: "back", label: "돌아가기", action: onBack, disabled: false },
+    ...jobs.map((job) => ({
+      id: job.id,
+      type: "job",
+      job,
+      disabled: progress.completedJobs.includes(job.id) || progress.energy < job.energyCost,
+      action: () => onStartJob(job)
+    })),
+    ...consumptions.map((item) => ({
+      id: item.id,
+      type: "consumption",
+      item,
+      disabled: progress.completedConsumptions.includes(item.id) || progress.coins < item.costCoins,
+      action: () => onBuy(item)
+    }))
+  ], [consumptions, jobs, onBack, onBuy, onStartJob, progress.coins, progress.completedConsumptions, progress.completedJobs, progress.energy]);
+
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [entries.length]);
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Enter", "Space"].includes(event.code)) return;
+      event.preventDefault();
+      if (event.code === "Enter" || event.code === "Space") {
+        const selected = entries[selectedIndex];
+        if (selected && !selected.disabled) selected.action();
+        return;
+      }
+      const dir = event.code === "ArrowUp" || event.code === "ArrowLeft" ? -1 : 1;
+      setSelectedIndex((index) => (index + dir + entries.length) % entries.length);
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [entries, selectedIndex]);
+
   return <div className="activity-list">
+    <div className="npc-panel-head">
+      <b>{title}</b>
+      <button
+        className={`ghost ${selectedIndex === 0 ? "selected" : ""}`}
+        onClick={onBack}
+        onMouseEnter={() => setSelectedIndex(0)}
+      >
+        돌아가기
+      </button>
+    </div>
     {jobs.map((job) => {
       const done = progress.completedJobs.includes(job.id);
       const tired = progress.energy < job.energyCost;
-      return <article className="activity-option production" key={job.id}>
+      const entryIndex = entries.findIndex((entry) => entry.type === "job" && entry.id === job.id);
+      return <article className={`activity-option production ${selectedIndex === entryIndex ? "selected" : ""}`} key={job.id} onMouseEnter={() => setSelectedIndex(entryIndex)}>
         <div className="activity-icon">{job.icon}</div>
         <div><p className="eyebrow">알바 · 생산 활동</p><h3>{job.title}</h3><p>{job.goal}</p><small>보상 {job.rewardCoins}코인 · 체력 -{job.energyCost}</small></div>
         <button className="primary" disabled={done || tired} onClick={() => onStartJob(job)}>{done ? "완료" : tired ? "체력 부족" : "알바 시작"}</button>
@@ -105,7 +275,8 @@ function ActivityList({ jobs, consumptions, progress, onStartJob, onBuy }) {
     {consumptions.map((item) => {
       const bought = progress.completedConsumptions.includes(item.id);
       const poor = progress.coins < item.costCoins;
-      return <article className="activity-option consumption" key={item.id}>
+      const entryIndex = entries.findIndex((entry) => entry.type === "consumption" && entry.id === item.id);
+      return <article className={`activity-option consumption ${selectedIndex === entryIndex ? "selected" : ""}`} key={item.id} onMouseEnter={() => setSelectedIndex(entryIndex)}>
         <div className="activity-icon">{item.icon}</div>
         <div><p className="eyebrow">소비 활동</p><h3>{item.title}</h3><p>{item.card.feedback}</p><small>{item.costCoins}코인 사용{item.energyGain ? ` · 체력 +${item.energyGain}` : ""}</small></div>
         <button className="secondary" disabled={bought || poor} onClick={() => onBuy(item)}>{bought ? "완료" : poor ? "코인 부족" : "소비하기"}</button>
@@ -133,6 +304,13 @@ function MiniFrame({ job, progress, children, message, onComplete, done }) {
   </div>;
 }
 
+function MiniAssetIcon({ id, token, jobId, alt = "", className = "" }) {
+  const assetId = id ?? getMiniAssetForToken(token, jobId);
+  const source = assetId ? getMiniAsset(assetId) : null;
+  if (!source) return <span className={className}>{token}</span>;
+  return <img className={`mini-asset-icon ${className}`.trim()} src={source} alt={alt || assetId} draggable="false" />;
+}
+
 function OrderCraftGame({ job, onComplete }) {
   const [picked, setPicked] = useState([]);
   const [revealed, setRevealed] = useState(true);
@@ -153,9 +331,9 @@ function OrderCraftGame({ job, onComplete }) {
   };
   return <MiniFrame job={job} progress={(picked.length / order.length) * 100} done={done} onComplete={onComplete} message={wrong ? `주문이 달라요. 실수 ${mistakes}번, 다시 기억해 봐요.` : revealed ? "주문 카드를 외워요. 곧 가려집니다." : "기억한 순서대로 골라요."}>
     <div className="order-game-zone">
-      <div className="order-card"><b>주문</b><span>{revealed || wrong || done ? order.join(" ") : "❔ ❔ ❔"}</span><button className="secondary" onClick={() => setRevealed(true)}>잠깐 보기</button></div>
-      <div className="pizza-canvas"><span>{job.config.base}</span><i>{picked.join(" ")}</i></div>
-      <div className="ingredient-tray">{job.config.choices.map((choice) => <button key={choice} onClick={() => choose(choice)}>{choice}</button>)}<button onClick={() => setPicked([])}>↺</button></div>
+      <div className="order-card"><b>주문</b><span className="order-icons">{revealed || wrong || done ? order.map((token, index) => <MiniAssetIcon key={`${token}-${index}`} token={token} jobId={job.id} />) : "? ? ?"}</span><button className="secondary" onClick={() => setRevealed(true)}>잠깐 보기</button></div>
+      <div className="pizza-canvas"><MiniAssetIcon token={job.config.base} jobId={job.id} className="base-item" /><i>{picked.map((token, index) => <MiniAssetIcon key={`${token}-${index}`} token={token} jobId={job.id} />)}</i></div>
+      <div className="ingredient-tray">{job.config.choices.map((choice) => <button key={choice} onClick={() => choose(choice)}><MiniAssetIcon token={choice} jobId={job.id} /></button>)}<button onClick={() => setPicked([])}>초기화</button></div>
     </div>
   </MiniFrame>;
 }
@@ -175,46 +353,193 @@ function CareGaugeGame({ job, onComplete }) {
   };
   return <MiniFrame job={job} progress={(doneCount / totalNeeds) * 100} done={done} onComplete={onComplete} message={done ? "두 동물이 모두 만족했어요!" : `동물별 요구를 보고 맞는 도구를 골라요. 실수 ${mistakes}번`}>
     <div className="care-zone multi-care-zone">
-      {pets.map((pet) => <div className="pet-card" key={pet.id}><span>{pet.icon}</span><b>{pet.name}</b><em>{scores[pet.id] >= pet.needs.length ? "💖 만족" : currentNeed(pet)}</em><div className="tool-tray compact-tools">{job.config.tools.map((tool) => <button key={tool.id} onClick={() => useTool(tool, pet)}>{tool.icon}<small>{tool.label}</small></button>)}</div></div>)}
+      {pets.map((pet) => <div className="pet-card" key={pet.id}><MiniAssetIcon token={pet.icon} className="pet-icon" /><b>{pet.name}</b><em>{scores[pet.id] >= pet.needs.length ? "만족" : currentNeed(pet)}</em><div className="tool-tray compact-tools">{job.config.tools.map((tool) => <button key={tool.id} onClick={() => useTool(tool, pet)}><MiniAssetIcon id={getMiniAssetForPart(tool)} /><small>{tool.label}</small></button>)}</div></div>)}
     </div>
   </MiniFrame>;
 }
 
 function WirePuzzleGame({ job, onComplete }) {
-  const [selected, setSelected] = useState(null);
-  const [wires, setWires] = useState([]);
+  const [activeColor, setActiveColor] = useState(null);
+  const [paths, setPaths] = useState({});
   const [parts, setParts] = useState([]);
-  const done = wires.length >= job.config.wires.length && parts.length >= job.config.parts.length;
-  const chooseWire = (side, color) => {
-    if (side === "left") return setSelected(color);
-    if (selected === color && !wires.includes(color)) {
-      setWires((value) => [...value, color]);
-      setSelected(null);
-    }
+  const gridSize = job.config.gridSize ?? 5;
+  const cellKey = (cell) => cell.join(",");
+  const endpointByKey = useMemo(() => Object.fromEntries(job.config.wires.flatMap((wire) => [
+    [cellKey(wire.start), { ...wire, kind: "start" }],
+    [cellKey(wire.end), { ...wire, kind: "end" }]
+  ])), [job.config.wires]);
+  const completedColors = job.config.wires.filter((wire) => cellKey(paths[wire.color]?.at(-1) ?? []) === cellKey(wire.end)).map((wire) => wire.color);
+  const occupied = useMemo(() => {
+    const map = {};
+    Object.entries(paths).forEach(([color, path]) => {
+      path.forEach((cell) => { map[cellKey(cell)] = color; });
+    });
+    return map;
+  }, [paths]);
+  const totalSteps = job.config.wires.length + job.config.parts.length;
+  const doneSteps = completedColors.length + parts.length;
+  const done = doneSteps >= totalSteps;
+  const getWire = (color) => job.config.wires.find((wire) => wire.color === color);
+  const isAdjacent = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) === 1;
+  const resetWire = (color) => {
+    setPaths((value) => {
+      const next = { ...value };
+      delete next[color];
+      return next;
+    });
+    setActiveColor(color);
   };
-  return <MiniFrame job={job} progress={((wires.length + parts.length) / (job.config.wires.length + job.config.parts.length)) * 100} done={done} onComplete={onComplete} message="같은 색 전선을 연결한 뒤 부품을 끼워요.">
+  const chooseCell = (cell) => {
+    const key = cellKey(cell);
+    const endpoint = endpointByKey[key];
+    if (endpoint?.kind === "start") {
+      resetWire(endpoint.color);
+      setPaths((value) => ({ ...value, [endpoint.color]: [endpoint.start] }));
+      return;
+    }
+    if (!activeColor || completedColors.includes(activeColor)) return;
+    const wire = getWire(activeColor);
+    const path = paths[activeColor] ?? [wire.start];
+    const last = path[path.length - 1];
+    if (!isAdjacent(last, cell)) return;
+    if (endpoint && endpoint.color !== activeColor) return;
+    if (occupied[key] && occupied[key] !== activeColor) return;
+    const previousIndex = path.findIndex((item) => cellKey(item) === key);
+    if (previousIndex >= 0) {
+      setPaths((value) => ({ ...value, [activeColor]: path.slice(0, previousIndex + 1) }));
+      return;
+    }
+    const nextPath = [...path, cell];
+    setPaths((value) => ({ ...value, [activeColor]: nextPath }));
+    if (cellKey(cell) === cellKey(wire.end)) setActiveColor(null);
+  };
+  const clearBoard = () => {
+    setActiveColor(null);
+    setPaths({});
+  };
+  return <MiniFrame job={job} progress={(doneSteps / totalSteps) * 100} done={done} onComplete={onComplete} message={done ? "게임기가 다시 켜졌어요!" : "시작 단자를 누른 뒤 인접한 칸으로 전선을 이어요. 전선은 겹칠 수 없어요."}>
     <div className="repair-zone wire-zone">
-      <div className="machine-face"><span>{done ? "✨🕹️✨" : "⚠️🕹️⚠️"}</span></div>
-      <div className="wire-board">
-        <div>{job.config.wires.map((color) => <button key={color} className={`wire-pin ${color} ${selected === color ? "selected" : ""}`} onClick={() => chooseWire("left", color)}>{color}</button>)}</div>
-        <div>{job.config.wires.map((color) => <button key={color} className={`wire-pin ${color} ${wires.includes(color) ? "filled" : ""}`} onClick={() => chooseWire("right", color)}>{wires.includes(color) ? "연결" : color}</button>)}</div>
+      <div className="machine-face"><MiniAssetIcon id={done ? "arcade-fixed" : "arcade-broken"} /></div>
+      <div className="wire-puzzle-head">
+        <b>{completedColors.length}/{job.config.wires.length} 연결</b>
+        <button className="secondary" onClick={clearBoard}>회로 초기화</button>
       </div>
-      <div className="part-tray">{job.config.parts.map((part) => <button key={part.id} className={parts.includes(part.id) ? "filled" : ""} onClick={() => setParts((value) => value.includes(part.id) ? value : [...value, part.id])}>{part.icon}<small>{part.label}</small></button>)}</div>
+      <div className="wire-grid" style={{ gridTemplateColumns: `repeat(${gridSize}, 1fr)` }}>
+        {Array.from({ length: gridSize * gridSize }).map((_, index) => {
+          const cell = [index % gridSize, Math.floor(index / gridSize)];
+          const key = cellKey(cell);
+          const endpoint = endpointByKey[key];
+          const color = endpoint?.color ?? occupied[key];
+          const isActive = activeColor && color === activeColor;
+          const isComplete = color && completedColors.includes(color);
+          return <button
+            key={key}
+            className={`wire-cell ${color ?? ""} ${endpoint ? "terminal" : ""} ${isActive ? "active" : ""} ${isComplete ? "complete" : ""}`}
+            onClick={() => chooseCell(cell)}
+          >
+            {color && <MiniAssetIcon id={getMiniAssetForWire(color)} />}
+            {endpoint && <small>{endpoint.kind === "start" ? "S" : "E"}</small>}
+          </button>;
+        })}
+      </div>
+      <div className="part-tray">{job.config.parts.map((part) => <button key={part.id} className={parts.includes(part.id) ? "filled" : ""} onClick={() => setParts((value) => value.includes(part.id) ? value : [...value, part.id])}><MiniAssetIcon id={getMiniAssetForPart(part)} /><small>{part.label}</small></button>)}</div>
     </div>
   </MiniFrame>;
 }
 
 function RoleRhythmGame({ job, onComplete }) {
-  const [index, setIndex] = useState(0);
+  const roles = job.config.roles;
+  const beatMs = job.config.beatMs ?? 760;
+  const travelMs = job.config.travelMs ?? 1800;
+  const hitWindowMs = job.config.hitWindowMs ?? 260;
+  const targetHits = job.config.targetHits ?? Math.ceil(job.config.notes.length * 0.72);
+  const chart = useMemo(() => job.config.notes.map((token, index) => {
+    const lane = roles.findIndex((role) => role.icon === token);
+    const hitAt = 900 + index * beatMs;
+    return { id: `${token}-${index}`, token, lane: Math.max(0, lane), spawnAt: hitAt - travelMs, hitAt };
+  }), [beatMs, job.config.notes, roles, travelMs]);
+  const [startedAt, setStartedAt] = useState(() => performance.now());
+  const [elapsed, setElapsed] = useState(0);
+  const [judgements, setJudgements] = useState({});
+  const [score, setScore] = useState(0);
   const [miss, setMiss] = useState(0);
-  const target = job.config.notes[index];
-  const done = index >= job.config.notes.length;
-  const hit = (role) => {
-    if (role.icon === target) setIndex((value) => value + 1);
-    else setMiss((value) => value + 1);
+  const [combo, setCombo] = useState(0);
+  const [lastJudge, setLastJudge] = useState("준비");
+  const finished = elapsed > chart[chart.length - 1].hitAt + 700;
+  const done = finished && score >= targetHits;
+  const progress = Math.min(100, (score / targetHits) * 100);
+  const reset = () => {
+    setStartedAt(performance.now());
+    setElapsed(0);
+    setJudgements({});
+    setScore(0);
+    setMiss(0);
+    setCombo(0);
+    setLastJudge("준비");
   };
-  return <MiniFrame job={job} progress={(index / job.config.notes.length) * 100} done={done} onComplete={onComplete} message={done ? "무대 준비 완료!" : `이번 신호는 ${target} 입니다. 실수 ${miss}번`}>
-    <div className="rhythm-stage alba-rhythm role-rhythm"><div className="falling-note">{target}</div><div className="role-buttons">{job.config.roles.map((role) => <button key={role.icon} onClick={() => hit(role)}>{role.icon}<small>{role.label}</small></button>)}</div></div>
+  useEffect(() => {
+    let frame = 0;
+    const tick = () => {
+      setElapsed(performance.now() - startedAt);
+      frame = window.requestAnimationFrame(tick);
+    };
+    frame = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(frame);
+  }, [startedAt]);
+  useEffect(() => {
+    chart.forEach((note) => {
+      if (judgements[note.id] || elapsed <= note.hitAt + hitWindowMs) return;
+      setJudgements((value) => value[note.id] ? value : { ...value, [note.id]: "miss" });
+      setMiss((value) => value + 1);
+      setCombo(0);
+      setLastJudge("Miss");
+    });
+  }, [chart, elapsed, hitWindowMs, judgements]);
+  const hitLane = useCallback((lane) => {
+    if (done || finished) return;
+    const note = chart
+      .filter((item) => item.lane === lane && !judgements[item.id])
+      .map((item) => ({ ...item, diff: Math.abs(elapsed - item.hitAt) }))
+      .filter((item) => item.diff <= hitWindowMs)
+      .sort((a, b) => a.diff - b.diff)[0];
+    if (!note) {
+      setMiss((value) => value + 1);
+      setCombo(0);
+      setLastJudge("Too early");
+      return;
+    }
+    const grade = note.diff < 90 ? "Perfect" : note.diff < 170 ? "Good" : "Ok";
+    setJudgements((value) => ({ ...value, [note.id]: grade.toLowerCase() }));
+    setScore((value) => value + 1);
+    setCombo((value) => value + 1);
+    setLastJudge(grade);
+  }, [chart, done, elapsed, finished, hitWindowMs, judgements]);
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      const lane = roles.findIndex((role) => role.keys?.includes(event.code));
+      if (lane < 0) return;
+      event.preventDefault();
+      hitLane(lane);
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [hitLane, roles]);
+  const activeNotes = chart.filter((note) => elapsed >= note.spawnAt && elapsed <= note.hitAt + hitWindowMs && !judgements[note.id]);
+  return <MiniFrame job={job} progress={progress} done={done} onComplete={onComplete} message={done ? "무대 준비 성공! 타이밍이 좋아요." : finished ? `성공 ${score}/${targetHits}. 조금 더 맞춰야 해요.` : `${targetHits}개 이상 맞춰요. 성공 ${score} · 실수 ${miss} · 콤보 ${combo}`}>
+    <div className="rhythm-stage alba-rhythm role-rhythm rhythm-runner">
+      <div className="rhythm-scoreboard"><b>{lastJudge}</b><span>{score}/{targetHits}</span></div>
+      <div className="rhythm-lanes">
+        {roles.map((role, lane) => <div className="rhythm-lane" key={role.icon}>
+          {activeNotes.filter((note) => note.lane === lane).map((note) => {
+            const y = Math.min(96, Math.max(0, ((elapsed - note.spawnAt) / travelMs) * 88));
+            return <div className="falling-note" key={note.id} style={{ top: `${y}%` }}><MiniAssetIcon token={note.token} /></div>;
+          })}
+          <div className="rhythm-hit-line" />
+        </div>)}
+      </div>
+      <div className="role-buttons">{roles.map((role, lane) => <button key={role.icon} onClick={() => hitLane(lane)}><MiniAssetIcon token={role.icon} /><small>{role.key} · {role.label}</small></button>)}</div>
+      {finished && !done && <button className="secondary" onClick={reset}>다시 도전</button>}
+    </div>
   </MiniFrame>;
 }
 
@@ -229,7 +554,7 @@ function PhotoTimingGame({ job, onComplete }) {
   const good = pose === "😁";
   const done = shots.filter(Boolean).length >= 2;
   return <MiniFrame job={job} progress={(shots.filter(Boolean).length / 2) * 100} done={done} onComplete={onComplete} message={done ? "선명한 사진을 골랐어요!" : "활짝 웃는 순간에 셔터를 눌러요."}>
-    <div className="photo-zone"><div className="photo-frame"><span>{pose}</span></div><button className="primary" onClick={() => setShots((value) => [...value, good])}>찰칵!</button><div className="shot-strip">{shots.map((shot, i) => <i key={i}>{shot ? "🖼️" : "🌫️"}</i>)}</div></div>
+    <div className="photo-zone"><div className="photo-frame"><MiniAssetIcon id="photo-frame" className="photo-frame-prop" /><MiniAssetIcon token={pose} className="photo-subject" /></div><button className="primary" onClick={() => setShots((value) => [...value, good])}><MiniAssetIcon id="shutter-button" />찰칵!</button><div className="shot-strip">{shots.map((shot, i) => <i key={i}><MiniAssetIcon id={shot ? "smile-target" : "camera"} /></i>)}</div></div>
   </MiniFrame>;
 }
 
@@ -247,7 +572,7 @@ function DeliveryGridGame({ job, onComplete }) {
   };
   const distance = Math.abs(pos[0] - job.config.goal[0]) + Math.abs(pos[1] - job.config.goal[1]);
   return <MiniFrame job={job} progress={done ? 100 : Math.max(10, 100 - distance * 14)} done={done} onComplete={onComplete} message={done ? `배달 성공! 이동 ${steps}번` : "장애물을 피해 목적지까지 이동해요."}>
-    <div className="delivery-zone"><div className="delivery-grid" style={{ gridTemplateColumns: `repeat(${job.config.cols}, 1fr)` }}>{Array.from({ length: job.config.cols * job.config.rows }).map((_, i) => { const cell = [i % job.config.cols, Math.floor(i / job.config.cols)]; const isBlock = blocks.has(key(cell)); const isGoal = key(cell) === key(job.config.goal); const isPlayer = key(cell) === key(pos); return <span key={i} className={isBlock ? "block" : isGoal ? "goal" : isPlayer ? "runner-cell" : ""}>{isPlayer ? "🚲" : isGoal ? "🏠" : isBlock ? "🚧" : ""}</span>; })}</div><div className="mini-controls"><button onClick={() => move(0, -1)}>↑</button><button onClick={() => move(-1, 0)}>←</button><button onClick={() => move(0, 1)}>↓</button><button onClick={() => move(1, 0)}>→</button></div></div>
+    <div className="delivery-zone"><div className="delivery-grid" style={{ gridTemplateColumns: `repeat(${job.config.cols}, 1fr)` }}>{Array.from({ length: job.config.cols * job.config.rows }).map((_, i) => { const cell = [i % job.config.cols, Math.floor(i / job.config.cols)]; const isBlock = blocks.has(key(cell)); const isGoal = key(cell) === key(job.config.goal); const isPlayer = key(cell) === key(pos); const iconId = isPlayer ? "delivery-bag" : isGoal ? "goal-flag" : isBlock ? "obstacle-cone" : null; return <span key={i} className={isBlock ? "block" : isGoal ? "goal" : isPlayer ? "runner-cell" : ""}>{iconId && <MiniAssetIcon id={iconId} />}</span>; })}</div><div className="mini-controls"><button onClick={() => move(0, -1)}>↑</button><button onClick={() => move(-1, 0)}>←</button><button onClick={() => move(0, 1)}>↓</button><button onClick={() => move(1, 0)}>→</button></div></div>
   </MiniFrame>;
 }
 
@@ -256,8 +581,9 @@ function SequenceBuildGame({ job, onComplete }) {
   const [wrong, setWrong] = useState(0);
   const done = step >= job.config.steps.length;
   return <MiniFrame job={job} progress={(step / job.config.steps.length) * 100} done={done} onComplete={onComplete} message={done ? "로봇이 켜졌어요!" : `순서대로 조립해요. 실수 ${wrong}번`}>
-    <div className="sequence-build-zone"><div className="robot-preview">{job.config.steps.slice(0, step).map((part) => part.icon).join(" ") || "🔧"}</div><div className="part-tray">{job.config.steps.map((part, index) => <button key={part.id} className={index < step ? "filled" : ""} onClick={() => { if (index === step) setStep((value) => value + 1); else setWrong((value) => value + 1); }}>{part.icon}<small>{part.label}</small></button>)}</div></div>
+    <div className="sequence-build-zone"><div className="robot-preview">{job.config.steps.slice(0, step).map((part) => <MiniAssetIcon key={part.id} id={getMiniAssetForPart(part)} />)}{step === 0 && <MiniAssetIcon id="circuit-panel" />}</div><div className="part-tray">{job.config.steps.map((part, index) => <button key={part.id} className={index < step ? "filled" : ""} onClick={() => { if (index === step) setStep((value) => value + 1); else setWrong((value) => value + 1); }}><MiniAssetIcon id={getMiniAssetForPart(part)} /><small>{part.label}</small></button>)}</div></div>
   </MiniFrame>;
 }
+
 
 

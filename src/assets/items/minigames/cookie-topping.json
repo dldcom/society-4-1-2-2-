@@ -1,0 +1,8 @@
+{
+  "id": "cookie-topping",
+  "name": "Cookie topping",
+  "itemId": "cookie-topping",
+  "imageExt": "png",
+  "imagePath": "/assets/items/minigames/cookie-topping.png",
+  "sourceSheet": "society-minigame-items-sheet.png"
+}

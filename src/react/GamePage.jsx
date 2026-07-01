@@ -4,7 +4,7 @@ import { createGame } from "../phaser/createGame.js";
 import { ActivityOverlay } from "./ActivityOverlay.jsx";
 import { PlacementEditor } from "./PlacementEditor.jsx";
 
-export function GamePage({ playerCharacter, progress, canFinish, onCompleteJob, onBuyConsumption, onQuiz, onRestart }) {
+export function GamePage({ playerCharacter, progress, canFinish, inputLocked = false, onCompleteJob, onBuyConsumption, onQuiz, onRestart }) {
   const hostRef = useRef(null);
   const gameRef = useRef(null);
   const latestRef = useRef({ playerCharacter, progress });
@@ -15,7 +15,9 @@ export function GamePage({ playerCharacter, progress, canFinish, onCompleteJob, 
   latestRef.current = {
     playerCharacter,
     progress,
-    actionPlaceIds: activityPlaces.map((place) => place.id)
+    actionPlaceIds: activityPlaces.map((place) => place.id),
+    activePlaceId: activePlace?.id ?? null,
+    inputLocked: inputLocked || Boolean(activePlace) || editorOpen
   };
 
   useEffect(() => {

@@ -1,0 +1,8 @@
+{
+  "id": "icecream-cone",
+  "name": "Ice cream cone",
+  "itemId": "icecream-cone",
+  "imageExt": "png",
+  "imagePath": "/assets/items/minigames/icecream-cone.png",
+  "sourceSheet": "society-minigame-items-sheet.png"
+}

@@ -1,0 +1,8 @@
+{
+  "id": "pet-bone",
+  "name": "Snack bone",
+  "itemId": "pet-bone",
+  "imageExt": "png",
+  "imagePath": "/assets/items/minigames/pet-bone.png",
+  "sourceSheet": "society-minigame-items-sheet.png"
+}

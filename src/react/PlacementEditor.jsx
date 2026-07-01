@@ -170,7 +170,7 @@ export function PlacementEditor({ onClose }) {
           onPointerUp={() => setDragging(null)}
           onPointerLeave={() => setDragging(null)}
         >
-          <img className="placement-map-image" src={assetUrls.map} alt="" draggable="false" />
+          <img className="placement-map-image" src={assetUrls.maps.baseTown} alt="" draggable="false" />
 
           {blockedAreas.map((area) => (
             <button

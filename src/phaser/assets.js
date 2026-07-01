@@ -24,33 +24,22 @@ import craftWorkshopUrl from "../assets/buildings/split/craft-workshop.png";
 import musicStoreUrl from "../assets/buildings/split/music-store.png";
 import snackKioskUrl from "../assets/buildings/split/snack-kiosk.png";
 import catWalkUrl from "../assets/characters/cat-walk-spritesheet.png";
+import villageBoyUrl from "../assets/characters/village-boy.png";
+import farmerUrl from "../assets/characters/farmer.png";
 import npcSheetUrl from "../assets/characters/npc-town-spritesheet.png";
-import cozyTownTilesetUrl from "../assets/tilesets/cozy-town/tileset.png";
-import barrelUrl from "../assets/items/town/barrel.png";
-import benchUrl from "../assets/items/town/bench.png";
-import bushFlowerUrl from "../assets/items/town/bush-flower.png";
-import bushRoundUrl from "../assets/items/town/bush-round.png";
-import crateUrl from "../assets/items/town/crate.png";
-import fenceHorizontalUrl from "../assets/items/town/fence-horizontal.png";
-import fenceVerticalUrl from "../assets/items/town/fence-vertical.png";
-import flowerRedUrl from "../assets/items/town/flower-red.png";
-import flowerYellowUrl from "../assets/items/town/flower-yellow.png";
-import lampUrl from "../assets/items/town/lamp.png";
-import mailboxUrl from "../assets/items/town/mailbox.png";
-import marketStallUrl from "../assets/items/town/market-stall.png";
-import noticeBoardUrl from "../assets/items/town/notice-board.png";
-import rockSmallUrl from "../assets/items/town/rock-small.png";
-import signpostUrl from "../assets/items/town/signpost.png";
-import stumpUrl from "../assets/items/town/stump.png";
-import treeAppleUrl from "../assets/items/town/tree-apple.png";
-import treeRoundUrl from "../assets/items/town/tree-round.png";
+import baseTownMapUrl from "../assets/maps/base-town-map.png";
 
 export const assetUrls = {
   player: catWalkUrl,
-  npcs: npcSheetUrl,
-  tilesets: {
-    cozyTown: cozyTownTilesetUrl
+  maps: {
+    baseTown: baseTownMapUrl
   },
+  players: {
+    "player-cat": catWalkUrl,
+    "player-village-boy": villageBoyUrl,
+    "player-farmer": farmerUrl
+  },
+  npcs: npcSheetUrl,
   buildings: {
     school: schoolUrl,
     cafeteria: cafeteriaUrl,
@@ -77,25 +66,5 @@ export const assetUrls = {
     "craft-workshop": craftWorkshopUrl,
     "music-store": musicStoreUrl,
     "snack-kiosk": snackKioskUrl
-  },
-  townItems: {
-    barrel: barrelUrl,
-    bench: benchUrl,
-    "bush-flower": bushFlowerUrl,
-    "bush-round": bushRoundUrl,
-    crate: crateUrl,
-    "fence-horizontal": fenceHorizontalUrl,
-    "fence-vertical": fenceVerticalUrl,
-    "flower-red": flowerRedUrl,
-    "flower-yellow": flowerYellowUrl,
-    lamp: lampUrl,
-    mailbox: mailboxUrl,
-    "market-stall": marketStallUrl,
-    "notice-board": noticeBoardUrl,
-    "rock-small": rockSmallUrl,
-    signpost: signpostUrl,
-    stump: stumpUrl,
-    "tree-apple": treeAppleUrl,
-    "tree-round": treeRoundUrl
   }
 };

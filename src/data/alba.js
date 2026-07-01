@@ -1,10 +1,73 @@
-﻿export const playerCharacter = {
-  id: "alba-hero",
-  name: "알바 도전자",
-  icon: "😺",
-  role: "하루 동안 우리 동네 알바를 해 보고, 번 코인으로 소비 활동도 해 보는 주인공"
-};
+﻿export const playerCharacters = [
+  {
+    id: "cat",
+    name: "고양이 알바생",
+    icon: "😺",
+    role: "가볍고 빠르게 마을을 누비는 고양이 캐릭터",
+    item: "기존 고양이 스프라이트",
+    sprite: {
+      key: "player-cat",
+      frameWidth: 192,
+      frameHeight: 192,
+      displayWidth: 104,
+      displayHeight: 104,
+      offsetY: -14,
+      idle: { down: 0, left: 4, right: 8, up: 12 },
+      walk: {
+        down: [0, 3],
+        left: [4, 7],
+        right: [8, 11],
+        up: [12, 15]
+      }
+    }
+  },
+  {
+    id: "village-boy",
+    name: "마을 소년",
+    icon: "🧢",
+    role: "초록 모자와 파란 재킷을 입은 픽셀아트 남자아이",
+    item: "농장 RPG풍 남자 캐릭터",
+    sprite: {
+      key: "player-village-boy",
+      frameWidth: 48,
+      frameHeight: 64,
+      displayWidth: 78,
+      displayHeight: 104,
+      offsetY: -18,
+      idle: { down: 0, up: 6, right: 12, left: 18 },
+      walk: {
+        down: [0, 5],
+        up: [6, 11],
+        right: [12, 17],
+        left: [18, 23]
+      }
+    }
+  },
+  {
+    id: "farmer",
+    name: "꼬마 농부",
+    icon: "🌱",
+    role: "밭일에도 마을 심부름에도 씩씩한 농부 캐릭터",
+    item: "농부 캐릭터 스프라이트",
+    sprite: {
+      key: "player-farmer",
+      frameWidth: 48,
+      frameHeight: 64,
+      displayWidth: 78,
+      displayHeight: 104,
+      offsetY: -18,
+      idle: { down: 0, up: 6, right: 12, left: 18 },
+      walk: {
+        down: [0, 5],
+        up: [6, 11],
+        right: [12, 17],
+        left: [18, 23]
+      }
+    }
+  }
+];
 
+export const playerCharacter = playerCharacters[0];
 export const jobs = [
   {
     id: "pizza-job",
@@ -75,7 +138,15 @@ export const jobs = [
     goal: "같은 색 단자를 연결하고 빠진 부품까지 끼워 게임기를 켜요.",
     productionText: "손님이 게임을 즐길 수 있도록 기계를 고치는 일은 생산 활동이에요.",
     card: { id: "card-arcade-job", type: "production", badge: "🕹️", title: "게임기 수리 알바", description: "고장 난 게임기를 고친 생산 활동", feedback: "서비스가 제대로 제공되도록 준비하고 고치는 일은 생산 활동이에요." },
-    config: { wires: ["red", "blue", "yellow"], parts: [{ id: "button", label: "버튼", icon: "🔴" }, { id: "lever", label: "레버", icon: "🕹️" }] }
+    config: {
+      gridSize: 5,
+      wires: [
+        { color: "red", start: [0, 0], end: [4, 4] },
+        { color: "blue", start: [0, 4], end: [3, 1] },
+        { color: "yellow", start: [1, 1], end: [2, 3] }
+      ],
+      parts: [{ id: "button", label: "버튼", icon: "🔴" }, { id: "lever", label: "레버", icon: "🕹️" }]
+    }
   },
   {
     id: "stage-job",
@@ -90,7 +161,18 @@ export const jobs = [
     goal: "노트에 맞는 역할 버튼을 눌러 무대 타이밍을 맞춰요.",
     productionText: "사람들이 공연을 즐길 수 있게 무대를 준비하는 일은 생산 활동이에요.",
     card: { id: "card-stage-job", type: "production", badge: "🎤", title: "공연장 준비 알바", description: "무대와 조명을 준비한 생산 활동", feedback: "즐길 수 있는 서비스를 준비하고 제공하는 일은 생산 활동이에요." },
-    config: { notes: ["💡", "🎤", "👏", "💡", "🎤", "👏"], roles: [{ icon: "💡", label: "조명" }, { icon: "🎤", label: "마이크" }, { icon: "👏", label: "응원" }] }
+    config: {
+      notes: ["💡", "🎤", "👏", "💡", "👏", "🎤", "💡", "🎤", "👏", "👏", "💡", "🎤"],
+      targetHits: 9,
+      beatMs: 720,
+      travelMs: 1800,
+      hitWindowMs: 260,
+      roles: [
+        { icon: "💡", label: "조명", key: "A", keys: ["KeyA", "ArrowLeft"] },
+        { icon: "🎤", label: "마이크", key: "S", keys: ["KeyS", "ArrowDown"] },
+        { icon: "👏", label: "응원", key: "D", keys: ["KeyD", "ArrowRight"] }
+      ]
+    }
   },
   {
     id: "photo-job",
@@ -165,3 +247,4 @@ export function getConsumptionsAtPlace(placeId) {
 export function uniqueCards(cards) {
   return cards.filter((card, index, list) => list.findIndex((item) => item.id === card.id) === index);
 }
+

@@ -1,0 +1,8 @@
+{
+  "id": "battery",
+  "name": "Battery",
+  "itemId": "battery",
+  "imageExt": "png",
+  "imagePath": "/assets/items/minigames/battery.png",
+  "sourceSheet": "society-minigame-items-sheet.png"
+}
