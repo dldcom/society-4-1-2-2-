@@ -1,8 +1,12 @@
 {
   "id": "pizza-olive",
-  "name": "Olive topping",
+  "name": "pizza-olive",
   "itemId": "pizza-olive",
   "imageExt": "png",
   "imagePath": "/assets/items/minigames/pizza-olive.png",
-  "sourceSheet": "society-minigame-items-sheet.png"
+  "sourceSheet": "pizza-spritesheet.png",
+  "frame": {
+    "row": 1,
+    "col": 0
+  }
 }

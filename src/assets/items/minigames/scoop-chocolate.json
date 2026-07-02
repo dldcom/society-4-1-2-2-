@@ -4,5 +4,11 @@
   "itemId": "scoop-chocolate",
   "imageExt": "png",
   "imagePath": "/assets/items/minigames/scoop-chocolate.png",
-  "sourceSheet": "society-minigame-items-sheet.png"
+  "sourceSheet": "icecream-spritesheet.png",
+  "frame": {
+    "x": 0,
+    "y": 512,
+    "w": 384,
+    "h": 512
+  }
 }

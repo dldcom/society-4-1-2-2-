@@ -12,6 +12,10 @@ export class TownScene extends Phaser.Scene {
     this.playerSpriteConfig = null;
     this.playerAnimPrefix = "player";
     this.questMarker = null;
+    this.placeSprites = new Map();
+    this.activeGlowId = "";
+    this.activeGlowTween = null;
+    this.activeSparkleTweens = [];
     this.npcSprites = new Map();
     this.interactionLockedUntil = 0;
     this.lastInputLocked = false;
@@ -46,12 +50,13 @@ export class TownScene extends Phaser.Scene {
     this.createPlayer();
     this.createPlayerAnimations();
 
-    this.questMarker = this.add.text(0, 0, "★", {
+    this.questMarker = this.add.text(0, 0, "⭐", {
       fontFamily: "Arial",
-      fontSize: "38px",
-      color: "#3b2b24",
-      backgroundColor: "#ffd94f",
-      padding: { x: 10, y: 2 }
+      fontSize: "34px",
+      color: "#ffd94f",
+      stroke: "#3b2b24",
+      strokeThickness: 3,
+      shadow: { offsetX: 0, offsetY: 3, color: "#3b2b24", blur: 0, fill: true }
     }).setOrigin(0.5).setDepth(5000);
     this.questMarker.setVisible(false);
 
@@ -81,10 +86,36 @@ export class TownScene extends Phaser.Scene {
   };
 
   addPlace(place) {
+    const glow = this.add.image(place.x, place.y, `building-${place.building}`);
+    glow.setOrigin(0.5, 1);
+    glow.setDisplaySize(place.w * 1.08, place.w * 0.8);
+    glow.setDepth(place.y - 1);
+    glow.setTint(0xffe27a);
+    glow.setAlpha(0);
+    glow.setVisible(false);
+    glow.setBlendMode(Phaser.BlendModes.ADD);
+    const glowBaseScale = { x: glow.scaleX, y: glow.scaleY };
+
     const sprite = this.add.image(place.x, place.y, `building-${place.building}`);
     sprite.setOrigin(0.5, 1);
     sprite.setDisplaySize(place.w, place.w * 0.74);
     sprite.setDepth(place.y);
+    const spriteBaseScale = { x: sprite.scaleX, y: sprite.scaleY };
+
+    const sparkleOffsets = [
+      { x: -place.w * 0.36, y: -place.w * 0.58, delay: 0 },
+      { x: place.w * 0.34, y: -place.w * 0.5, delay: 180 },
+      { x: 0, y: -place.w * 0.78, delay: 360 }
+    ];
+    const sparkles = sparkleOffsets.map(({ x, y }) => this.add.text(place.x + x, place.y + y, "✦", {
+      fontFamily: "Arial",
+      fontSize: "24px",
+      color: "#fff2a8",
+      stroke: "#7a4a27",
+      strokeThickness: 3
+    }).setOrigin(0.5).setDepth(place.y + 3).setVisible(false).setAlpha(0));
+
+    this.placeSprites.set(place.id, { sprite, spriteBaseScale, glow, glowBaseScale, sparkles, sparkleOffsets, place });
 
     this.add.text(place.x, place.y + 20, `${place.icon ?? ""} ${place.name}`, {
       fontFamily: "Arial",
@@ -189,12 +220,8 @@ export class TownScene extends Phaser.Scene {
       this.bridge.onNearChange(nearPlace ?? null);
     }
 
-    if (nearPlace) {
-      this.questMarker.setVisible(true);
-      this.questMarker.setPosition(nearPlace.x, nearPlace.y - nearPlace.w * 0.58);
-    } else {
-      this.questMarker.setVisible(false);
-    }
+    this.questMarker.setVisible(false);
+    this.updatePlaceGlow(nearPlace);
 
     if (
       !activePlaceId &&
@@ -219,6 +246,83 @@ export class TownScene extends Phaser.Scene {
       }
     });
     return best;
+  }
+
+  updatePlaceGlow(nearPlace) {
+    const nextId = nearPlace?.id ?? "";
+    if (nextId === this.activeGlowId) return;
+
+    if (this.activeGlowTween) {
+      this.activeGlowTween.stop();
+      this.activeGlowTween = null;
+    }
+    this.activeSparkleTweens.forEach((tween) => tween.stop());
+    this.activeSparkleTweens = [];
+
+    if (this.activeGlowId) {
+      const previous = this.placeSprites.get(this.activeGlowId);
+      previous?.sprite.clearTint();
+      if (previous?.spriteBaseScale) previous.sprite.setScale(previous.spriteBaseScale.x, previous.spriteBaseScale.y);
+      if (previous?.glow) {
+        previous.glow.setVisible(false);
+        previous.glow.setAlpha(0);
+        if (previous.glowBaseScale) previous.glow.setScale(previous.glowBaseScale.x, previous.glowBaseScale.y);
+      }
+      previous?.sparkles?.forEach((sparkle, index) => {
+        const offset = previous.sparkleOffsets[index];
+        sparkle.setVisible(false);
+        sparkle.setAlpha(0);
+        sparkle.setScale(1);
+        if (offset && previous.place) sparkle.setPosition(previous.place.x + offset.x, previous.place.y + offset.y);
+      });
+    }
+
+    this.activeGlowId = nextId;
+    if (!nextId) return;
+
+    const current = this.placeSprites.get(nextId);
+    if (!current) return;
+    current.sprite.setTint(0xfff4bc);
+    current.glow.setVisible(true);
+    current.glow.setAlpha(0.28);
+    current.glow.setScale(current.glowBaseScale.x, current.glowBaseScale.y);
+    this.activeGlowTween = this.tweens.add({
+      targets: current.glow,
+      alpha: { from: 0.2, to: 0.5 },
+      scaleX: { from: current.glowBaseScale.x, to: current.glowBaseScale.x * 1.035 },
+      scaleY: { from: current.glowBaseScale.y, to: current.glowBaseScale.y * 1.035 },
+      duration: 720,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut"
+    });
+    this.activeSparkleTweens.push(this.tweens.add({
+      targets: current.sprite,
+      scaleX: { from: current.spriteBaseScale.x, to: current.spriteBaseScale.x * 1.012 },
+      scaleY: { from: current.spriteBaseScale.y, to: current.spriteBaseScale.y * 1.012 },
+      duration: 720,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut"
+    }));
+    current.sparkles.forEach((sparkle, index) => {
+      const offset = current.sparkleOffsets[index];
+      sparkle.setPosition(nearPlace.x + offset.x, nearPlace.y + offset.y);
+      sparkle.setVisible(true);
+      sparkle.setAlpha(0);
+      sparkle.setScale(0.7);
+      this.activeSparkleTweens.push(this.tweens.add({
+        targets: sparkle,
+        alpha: { from: 0, to: 1 },
+        scale: { from: 0.7, to: 1.18 },
+        y: sparkle.y - 8,
+        duration: 680,
+        delay: offset.delay,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut"
+      }));
+    });
   }
 
   movePlayer(deltaMs) {

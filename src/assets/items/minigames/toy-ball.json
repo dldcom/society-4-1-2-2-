@@ -4,5 +4,11 @@
   "itemId": "toy-ball",
   "imageExt": "png",
   "imagePath": "/assets/items/minigames/toy-ball.png",
-  "sourceSheet": "society-minigame-items-sheet.png"
+  "sourceSheet": "pet-tool-spritesheet.png",
+  "frame": {
+    "x": 1329,
+    "y": 0,
+    "w": 443,
+    "h": 443
+  }
 }

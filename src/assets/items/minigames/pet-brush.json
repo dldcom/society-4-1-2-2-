@@ -4,5 +4,11 @@
   "itemId": "pet-brush",
   "imageExt": "png",
   "imagePath": "/assets/items/minigames/pet-brush.png",
-  "sourceSheet": "society-minigame-items-sheet.png"
+  "sourceSheet": "pet-tool-spritesheet.png",
+  "frame": {
+    "x": 886,
+    "y": 0,
+    "w": 443,
+    "h": 443
+  }
 }

@@ -4,5 +4,11 @@
   "itemId": "icecream-cup",
   "imageExt": "png",
   "imagePath": "/assets/items/minigames/icecream-cup.png",
-  "sourceSheet": "society-minigame-items-sheet.png"
+  "sourceSheet": "icecream-spritesheet.png",
+  "frame": {
+    "x": 384,
+    "y": 0,
+    "w": 384,
+    "h": 512
+  }
 }

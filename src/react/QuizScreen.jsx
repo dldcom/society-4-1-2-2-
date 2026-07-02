@@ -38,7 +38,7 @@ export function QuizScreen({ cards, onBack, onComplete }) {
         </div>
         <button className="ghost" onClick={onBack}>마을로 돌아가기</button>
       </header>
-      <p className="quiz-help">알바처럼 물건이나 서비스를 만들고 준비한 일은 생산 활동, 번 코인을 내고 물건이나 서비스를 이용한 일은 소비 활동이에요.</p>
+      <p className="quiz-help">알바처럼 물건이나 서비스를 만들고 준비한 일은 생산 활동, 번 돈을 내고 물건이나 서비스를 이용한 일은 소비 활동이에요.</p>
       <div className="quiz-pool">
         {unplaced.map((card) => <Card key={card.id} card={card} selected={selected} onClick={setSelected} />)}
       </div>

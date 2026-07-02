@@ -25,7 +25,7 @@
     ctx.fillText(progress.stickers.join(" ") || "📋", 540, 390);
     ctx.textAlign = "left";
     ctx.font = "bold 34px sans-serif";
-    ctx.fillText(`코인 ${progress.coins} · 체력 ${progress.energy}/${progress.maxEnergy}`, 90, 455);
+    ctx.fillText(`돈 ${progress.coins}원`, 90, 455);
     ctx.fillText("내가 한 생산 활동", 90, 535);
     ctx.font = "28px sans-serif";
     productions.slice(0, 5).forEach((card, index) => ctx.fillText(`${card.badge} ${card.title}`, 110, 585 + index * 42));
@@ -48,7 +48,7 @@
         <h2>내일은 알바왕!</h2>
         <div className="result-avatar">{character.icon}</div>
         <div className="result-stickers">{progress.stickers.length ? progress.stickers.join(" ") : "📋"}</div>
-        <div className="result-summary-line">코인 {progress.coins} · 체력 {progress.energy}/{progress.maxEnergy}</div>
+        <div className="result-summary-line">돈 {progress.coins}원</div>
         <div className="result-columns">
           <div>
             <h3>내가 한 생산 활동</h3>
@@ -59,7 +59,7 @@
             {consumptions.map((card) => <p key={card.id}>{card.badge} {card.title}</p>)}
           </div>
         </div>
-        <div className="learning-point">알바로 물건이나 서비스를 준비한 일은 생산 활동, 번 코인으로 물건이나 서비스를 이용한 일은 소비 활동이에요.</div>
+        <div className="learning-point">알바로 물건이나 서비스를 준비한 일은 생산 활동, 번 돈으로 물건이나 서비스를 이용한 일은 소비 활동이에요.</div>
       </div>
       <div className="result-actions">
         <button className="primary" onClick={save}>이미지 저장하기</button>

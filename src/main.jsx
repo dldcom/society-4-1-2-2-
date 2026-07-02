@@ -10,8 +10,6 @@ import { ResultScreen } from "./react/ResultScreen.jsx";
 
 const initialProgress = {
   coins: 0,
-  energy: 5,
-  maxEnergy: 5,
   mood: 0,
   completedJobs: [],
   completedConsumptions: [],
@@ -24,19 +22,28 @@ function App() {
   const [screen, setScreen] = useState("start");
   const [progress, setProgress] = useState(initialProgress);
   const [selectedCharacter, setSelectedCharacter] = useState(playerCharacter);
-  const [toast, setToast] = useState("");
   const [pendingActivity, setPendingActivity] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const activeNotification = notifications[0] ?? null;
 
-  const completedJobCount = progress.completedJobs.length;
-  const completedConsumptionCount = progress.completedConsumptions.length;
-  const canFinish = progress.cards.length >= 5 && completedJobCount >= 3 && completedConsumptionCount >= 2;
+  const productionCardCount = progress.cards.filter((card) => card.type === "production").length;
+  const consumptionCardCount = progress.cards.filter((card) => card.type === "consumption").length;
+  const canFinish = productionCardCount >= 5 && consumptionCardCount >= 2;
 
   const resetDay = (character = selectedCharacter) => {
     setSelectedCharacter(character);
     setProgress(initialProgress);
-    setToast("");
     setPendingActivity(null);
+    setNotifications([]);
     setScreen("game");
+  };
+
+  const notify = (notification) => {
+    setNotifications((queue) => [...queue, { id: `${Date.now()}-${Math.random()}`, ...notification }]);
+  };
+
+  const closeNotification = () => {
+    setNotifications((queue) => queue.slice(1));
   };
 
   const queueJobReward = (job) => {
@@ -45,7 +52,7 @@ function App() {
 
   const queueConsumptionReward = (item) => {
     if (progress.coins < item.costCoins) {
-      setToast("코인이 부족해요. 알바를 먼저 해 볼까요?");
+      notify({ title: "돈이 부족해요", message: "알바를 먼저 해서 돈을 벌어 볼까요?", icon: "💸" });
       return false;
     }
     setPendingActivity({ kind: "consumption", activity: item });
@@ -56,19 +63,22 @@ function App() {
     if (!pendingActivity) return;
     const { kind, activity } = pendingActivity;
     if (kind === "job") {
+      const alreadyCompleted = progress.completedJobs.includes(activity.id);
+      const alreadyHasCard = progress.cards.some((card) => card.id === activity.card.id);
       setProgress((prev) => ({
         ...prev,
         coins: prev.coins + activity.rewardCoins,
-        energy: Math.max(0, prev.energy - activity.energyCost),
         completedJobs: prev.completedJobs.includes(activity.id) ? prev.completedJobs : [...prev.completedJobs, activity.id],
         cards: uniqueCards([...prev.cards, activity.card])
       }));
-      setToast(`${activity.title} 완료! 개념 퀴즈까지 통과해서 ${activity.rewardCoins}코인을 받았어요.`);
+      if (!alreadyCompleted) notify({ title: "돈을 얻었어요", message: `${activity.rewardCoins}원을 받았어요.`, icon: "💰" });
+      if (!alreadyHasCard) notify({ title: "카드를 얻었어요", message: `${activity.card.title} 카드를 얻었어요.`, icon: activity.card.badge });
     } else {
+      const alreadyCompleted = progress.completedConsumptions.includes(activity.id);
+      const alreadyHasCard = progress.cards.some((card) => card.id === activity.card.id);
       setProgress((prev) => ({
         ...prev,
         coins: prev.coins - activity.costCoins,
-        energy: Math.min(prev.maxEnergy, prev.energy + (activity.energyGain ?? 0)),
         mood: prev.mood + (activity.moodGain ?? 0),
         completedConsumptions: prev.completedConsumptions.includes(activity.id)
           ? prev.completedConsumptions
@@ -81,7 +91,8 @@ function App() {
           : prev.stickers,
         cards: uniqueCards([...prev.cards, activity.card])
       }));
-      setToast(`${activity.title} 완료! 개념 퀴즈까지 통과해서 소비 카드를 얻었어요.`);
+      if (!alreadyCompleted) notify({ title: "돈을 사용했어요", message: `${activity.costCoins}원을 사용했어요.`, icon: "🧾" });
+      if (!alreadyHasCard) notify({ title: "카드를 얻었어요", message: `${activity.card.title} 카드를 얻었어요.`, icon: activity.card.badge });
     }
     setPendingActivity(null);
   };
@@ -104,11 +115,12 @@ function App() {
           playerCharacter={selectedCharacter}
           progress={progress}
           canFinish={canFinish}
-          inputLocked={Boolean(pendingActivity)}
+          inputLocked={Boolean(pendingActivity) || Boolean(activeNotification)}
           jobMap={jobMap}
           consumptionMap={consumptionMap}
           onCompleteJob={queueJobReward}
           onBuyConsumption={queueConsumptionReward}
+          onNotify={notify}
           onQuiz={() => setScreen("quiz")}
           onRestart={() => setScreen("start")}
         />
@@ -136,8 +148,24 @@ function App() {
           onComplete={applyPendingActivity}
         />
       )}
-      {toast && <div className="toast" onAnimationEnd={() => setToast("")}>{toast}</div>}
+      {activeNotification && <GameNotification notification={activeNotification} onClose={closeNotification} />}
     </>
+  );
+}
+
+function GameNotification({ notification, onClose }) {
+  return (
+    <div className="reward-notification-overlay" role="dialog" aria-modal="true" aria-label={notification.title}>
+      <section className="reward-notification-panel">
+        <div className="reward-notification-icon">{notification.icon ?? "!"}</div>
+        <div>
+          <p className="eyebrow">{notification.kicker ?? "알림"}</p>
+          <h2>{notification.title}</h2>
+          <p>{notification.message}</p>
+        </div>
+        <button className="primary" onClick={onClose}>확인</button>
+      </section>
+    </div>
   );
 }
 

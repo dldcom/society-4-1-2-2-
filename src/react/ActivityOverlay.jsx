@@ -1,5 +1,5 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getConsumptionsAtPlace, getJobsAtPlace } from "../data/alba.js";
+import { jobs as allJobs, getConsumptionsAtPlace, getJobsAtPlace } from "../data/alba.js";
 import { getMiniAsset, getMiniAssetForPart, getMiniAssetForToken, getMiniAssetForWire } from "../data/minigameAssets.js";
 import bakeryLabelUrl from "../assets/items/parcel-labels/split/bakery.png";
 import schoolLabelUrl from "../assets/items/parcel-labels/split/school.png";
@@ -13,8 +13,28 @@ const parcelLabelImages = {
   store: storeLabelUrl
 };
 
+const boardJobAssets = {
+  "pizza-job": "pizza-dough",
+  "icecream-job": "icecream-cone",
+  "pet-job": "pet-dog",
+  "stage-job": "microphone",
+  "delivery-job": "delivery-bag",
+  "bread-job": "bread-box",
+  "robot-job": "robot-head"
+};
+
+const boardJobDescriptions = {
+  "pizza-job": "주문표를 보고 피자 토핑을 올려요.",
+  "icecream-job": "손님 주문대로 아이스크림을 쌓아요.",
+  "pet-job": "동물이 원하는 간식과 물건을 챙겨요.",
+  "stage-job": "공연에 맞춰 조명과 마이크를 눌러요.",
+  "delivery-job": "택배 상자를 맞는 곳으로 보내요.",
+  "bread-job": "빵이 알맞게 구워졌을 때 꺼내요.",
+  "robot-job": "로봇 부품을 알맞은 자리에 끼워요."
+};
+
 export function ActivityOverlay({ place, progress, onClose, onCompleteJob, onBuyConsumption }) {
-  const jobs = useMemo(() => getJobsAtPlace(place.id), [place.id]);
+  const jobs = useMemo(() => place.id === "board" ? allJobs : getJobsAtPlace(place.id), [place.id]);
   const consumptions = useMemo(() => getConsumptionsAtPlace(place.id), [place.id]);
   const [activeJob, setActiveJob] = useState(null);
   const [mode, setMode] = useState("talk");
@@ -46,7 +66,7 @@ export function ActivityOverlay({ place, progress, onClose, onCompleteJob, onBuy
   const buy = (item) => {
     const queued = onBuyConsumption(item);
     if (queued) onClose();
-    else setMessage("앗, 코인이 조금 모자라. 알바를 하나 하고 다시 와 볼래?");
+    else setMessage("앗, 돈이 조금 모자라. 알바를 하나 하고 다시 와 볼래?");
   };
 
   const line = message || npc.greeting || "어서 와. 무슨 일로 들렀어?";
@@ -101,6 +121,25 @@ export function ActivityOverlay({ place, progress, onClose, onCompleteJob, onBuy
     );
   }
 
+  if (place.id === "board") {
+    return (
+      <div className="overlay">
+        <div className="modal board-job-modal">
+          <div className="game-head">
+            <div>
+              <p className="eyebrow">알바 게시판</p>
+              <h2>오늘 할 수 있는 알바</h2>
+            </div>
+            <button className="icon-button" onClick={onClose}>X</button>
+          </div>
+          <div className="board-job-body">
+            <BoardJobList jobs={jobs} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="overlay npc-rpg-overlay">
       <div className="npc-rpg-layer">
@@ -108,7 +147,7 @@ export function ActivityOverlay({ place, progress, onClose, onCompleteJob, onBuy
 
         {mode === "talk" && dialogComplete && (
           <div className="npc-choice-panel npc-choice-compact">
-            {place.id === "board" && <div className="board-note npc-board-note"><b>오늘의 목표</b><span>알바로 생산 활동을 경험하고, 번 코인으로 소비 활동도 해 봐요.</span></div>}
+            {place.id === "board" && <div className="board-note npc-board-note"><b>오늘의 목표</b><span>생산 카드 5장과 소비 카드 2장을 모아 봐요.</span></div>}
             {choices.map((choice, index) => (
               <button
                 className={`${choice.variant} ${selectedChoice === index ? "selected" : ""}`}
@@ -160,6 +199,24 @@ export function ActivityOverlay({ place, progress, onClose, onCompleteJob, onBuy
           </div>
         </section>
       </div>
+    </div>
+  );
+}
+
+function BoardJobList({ jobs }) {
+  return (
+    <div className="board-job-list">
+      {jobs.map((job) => (
+        <article className="board-job-row" key={job.id}>
+          <div className="board-job-icon">
+            <MiniAssetIcon id={boardJobAssets[job.id]} />
+          </div>
+          <div>
+            <h3>{job.title}</h3>
+            <p>{boardJobDescriptions[job.id] ?? job.goal}</p>
+          </div>
+        </article>
+      ))}
     </div>
   );
 }
@@ -239,7 +296,7 @@ function ActivityList({ jobs, consumptions, progress, title, onBack, onStartJob,
       id: job.id,
       type: "job",
       job,
-      disabled: progress.completedJobs.includes(job.id) || progress.energy < job.energyCost,
+      disabled: progress.completedJobs.includes(job.id),
       action: () => onStartJob(job)
     })),
     ...consumptions.map((item) => ({
@@ -249,7 +306,7 @@ function ActivityList({ jobs, consumptions, progress, title, onBack, onStartJob,
       disabled: progress.completedConsumptions.includes(item.id) || progress.coins < item.costCoins,
       action: () => onBuy(item)
     }))
-  ], [consumptions, jobs, onBack, onBuy, onStartJob, progress.coins, progress.completedConsumptions, progress.completedJobs, progress.energy]);
+  ], [consumptions, jobs, onBack, onBuy, onStartJob, progress.coins, progress.completedConsumptions, progress.completedJobs]);
 
   useEffect(() => {
     setSelectedIndex(0);
@@ -284,12 +341,11 @@ function ActivityList({ jobs, consumptions, progress, title, onBack, onStartJob,
     </div>
     {jobs.map((job) => {
       const done = progress.completedJobs.includes(job.id);
-      const tired = progress.energy < job.energyCost;
       const entryIndex = entries.findIndex((entry) => entry.type === "job" && entry.id === job.id);
       return <article className={`activity-option production ${selectedIndex === entryIndex ? "selected" : ""}`} key={job.id} onMouseEnter={() => setSelectedIndex(entryIndex)}>
         <div className="activity-icon">{job.icon}</div>
-        <div><p className="eyebrow">알바 · 생산 활동</p><h3>{job.title}</h3><p>{job.goal}</p><small>보상 {job.rewardCoins}코인 · 체력 -{job.energyCost}</small></div>
-        <button className="primary" disabled={done || tired} onClick={() => onStartJob(job)}>{done ? "완료" : tired ? "체력 부족" : "알바 시작"}</button>
+        <div><p className="eyebrow">알바 · 생산 활동</p><h3>{job.title}</h3><p>{job.goal}</p><small>보상 {job.rewardCoins}원</small></div>
+        <button className="primary" disabled={done} onClick={() => onStartJob(job)}>{done ? "완료" : "알바 시작"}</button>
       </article>;
     })}
     {consumptions.map((item) => {
@@ -298,8 +354,8 @@ function ActivityList({ jobs, consumptions, progress, title, onBack, onStartJob,
       const entryIndex = entries.findIndex((entry) => entry.type === "consumption" && entry.id === item.id);
       return <article className={`activity-option consumption ${selectedIndex === entryIndex ? "selected" : ""}`} key={item.id} onMouseEnter={() => setSelectedIndex(entryIndex)}>
         <div className="activity-icon">{item.icon}</div>
-        <div><p className="eyebrow">소비 활동</p><h3>{item.title}</h3><p>{item.card.feedback}</p><small>{item.costCoins}코인 사용{item.energyGain ? ` · 체력 +${item.energyGain}` : ""}</small></div>
-        <button className="secondary" disabled={bought || poor} onClick={() => onBuy(item)}>{bought ? "완료" : poor ? "코인 부족" : "소비하기"}</button>
+        <div><p className="eyebrow">소비 활동</p><h3>{item.title}</h3><p>{item.card.feedback}</p><small>{item.costCoins}원 사용</small></div>
+        <button className="secondary" disabled={bought || poor} onClick={() => onBuy(item)}>{bought ? "완료" : poor ? "돈 부족" : "소비하기"}</button>
       </article>;
     })}
     {!jobs.length && !consumptions.length && <div className="board-note"><b>아직 준비 중</b><span>이 장소의 활동은 다음 버전에 추가할게요.</span></div>}
@@ -352,7 +408,7 @@ function OrderCraftGame({ job, onComplete }) {
       return next;
     });
   };
-  return <MiniFrame job={job} progress={(picked.length / order.length) * 100} done={done} onComplete={onComplete} message={wrong ? `주문이 달라요. 실수 ${mistakes}번, 다시 기억해 봐요.` : revealed ? "주문 카드를 외워요. 곧 가려집니다." : "기억한 순서대로 골라요."}>
+  return <MiniFrame job={job} progress={(picked.length / order.length) * 100} done={done} onComplete={onComplete} message={wrong ? `실패! 힌트를 확인해보세요. 실수 ${mistakes}번` : revealed ? "주문 카드를 외워요. 곧 가려집니다." : "기억한 순서대로 골라요."}>
     <div className="order-game-zone">
       <div className="order-card"><b>주문</b><span className="order-icons">{revealed || wrong || done ? order.map((token, index) => <MiniAssetIcon key={`${token}-${index}`} token={token} jobId={job.id} />) : "? ? ?"}</span><button className="secondary" onClick={() => setRevealed(true)}>잠깐 보기</button></div>
       <div className="pizza-canvas"><MiniAssetIcon token={job.config.base} jobId={job.id} className="base-item" /><i>{picked.map((token, index) => <MiniAssetIcon key={`${token}-${index}`} token={token} jobId={job.id} />)}</i></div>
@@ -429,7 +485,7 @@ function PizzaCraftGame({ job, onComplete }) {
     if (choice !== expected) {
       setMistakes((value) => value + 1);
       setPicked([]);
-      setFeedback({ id: `wrong-${choice}-${performance.now()}`, text: "다시!", kind: "wrong" });
+      setFeedback({ id: `wrong-${choice}-${performance.now()}`, text: "실패! 힌트를 확인해보세요", kind: "wrong" });
       return;
     }
     const nextPicked = [...picked, choice];
@@ -566,7 +622,7 @@ function IcecreamStackGame({ job, onComplete }) {
     if (choice !== expected) {
       setMistakes((value) => value + 1);
       setPicked([]);
-      setFeedback({ id: `ice-wrong-${performance.now()}`, text: "주문 확인!", kind: "wrong" });
+      setFeedback({ id: `ice-wrong-${performance.now()}`, text: "실패! 힌트를 확인해보세요", kind: "wrong" });
       return;
     }
     const nextPicked = [...picked, choice];
@@ -719,6 +775,24 @@ function createBakeSlots(ovens) {
   }));
 }
 
+const breadAssetIds = {
+  croissant: {
+    raw: "bread-croissant-raw",
+    perfect: "bread-croissant-perfect",
+    burnt: "bread-croissant-burnt"
+  },
+  bread: {
+    raw: "bread-loaf-raw",
+    perfect: "bread-loaf-perfect",
+    burnt: "bread-loaf-burnt"
+  },
+  cookie: {
+    raw: "bread-cookie-raw",
+    perfect: "bread-cookie-perfect",
+    burnt: "bread-cookie-burnt"
+  }
+};
+
 function BreadBakeGame({ job, onComplete }) {
   const ovens = job.config.ovens ?? [];
   const targetBakes = job.config.targetBakes ?? 6;
@@ -785,7 +859,7 @@ function BreadBakeGame({ job, onComplete }) {
           <div className="guide-portrait">🥐</div>
           <div>
             <b>빵굽기 알바</b>
-            <p>오븐 속 빵 색이 노릇한 구간에 들어오면 꺼내요. 너무 빠르면 덜 익고, 늦으면 타요.</p>
+            <p>게이지가 초록색 구간에 들어오면 빵을 꺼내요. 빵마다 익는 시간이 달라서 빠르게 살펴봐야 해요.</p>
             <button className="primary" onClick={startGame}>시작</button>
           </div>
         </div>
@@ -796,7 +870,10 @@ function BreadBakeGame({ job, onComplete }) {
           const elapsed = started ? now - slot.startedAt : 0;
           const perfectStart = slot.bakeMs - slot.perfectWindowMs / 2;
           const perfectEnd = slot.bakeMs + slot.perfectWindowMs / 2;
-          const progress = clamp((elapsed / (perfectEnd + 1100)) * 100, 0, 100);
+          const meterEnd = perfectEnd + 1100;
+          const progress = clamp((elapsed / meterEnd) * 100, 0, 100);
+          const perfectLeft = clamp((perfectStart / meterEnd) * 100, 0, 100);
+          const perfectWidth = clamp(((perfectEnd - perfectStart) / meterEnd) * 100, 0, 100);
           const status = elapsed < perfectStart ? "raw" : elapsed <= perfectEnd ? "perfect" : "burnt";
           return <button
             key={`${slot.id}-${index}`}
@@ -805,15 +882,24 @@ function BreadBakeGame({ job, onComplete }) {
             disabled={!started || done}
           >
             <span className="oven-heat" />
-            <span className="bread-loaf">{slot.icon}</span>
+            <span className="bread-loaf">
+              <MiniAssetIcon id={breadAssetIds[slot.id]?.[status] ?? "bread-loaf-perfect"} />
+            </span>
             <b>{slot.label}</b>
-            <span className="bake-meter"><i style={{ width: `${progress}%` }} /></span>
+            <span
+              className="bake-meter"
+              style={{ "--perfect-left": `${perfectLeft}%`, "--perfect-width": `${perfectWidth}%` }}
+              aria-label={`${slot.label} 굽기 진행도`}
+            >
+              <span className="bake-target" />
+              <i style={{ width: `${progress}%` }} />
+            </span>
             <small>{status === "raw" ? "기다리기" : status === "perfect" ? "꺼내기!" : "탐"}</small>
           </button>;
         })}
       </div>
       <div className="bread-counter-tray">
-        {Array.from({ length: targetBakes }).map((_, index) => <span key={index} className={index < baked ? "filled" : ""}>{index < baked ? "🥐" : ""}</span>)}
+        {Array.from({ length: targetBakes }).map((_, index) => <span key={index} className={index < baked ? "filled" : ""}>{index < baked ? <MiniAssetIcon id="bread-croissant-perfect" /> : ""}</span>)}
       </div>
       {done && <div className="sort-complete-panel bread-complete-panel">
         <MiniAssetIcon id="bread-box" />

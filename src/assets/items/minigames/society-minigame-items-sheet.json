@@ -2,7 +2,7 @@
   "id": "society-minigame-items",
   "cellSize": 64,
   "columns": 8,
-  "rows": 6,
+  "rows": 7,
   "image": "society-minigame-items-sheet.png",
   "items": [
     {
@@ -468,11 +468,44 @@
       }
     },
     {
+      "id": "bread-raw",
+      "name": "Raw bread dough",
+      "file": "bread-raw.png",
+      "frame": {
+        "x": 128,
+        "y": 320,
+        "w": 64,
+        "h": 64
+      }
+    },
+    {
+      "id": "bread-perfect",
+      "name": "Golden baked bread",
+      "file": "bread-perfect.png",
+      "frame": {
+        "x": 192,
+        "y": 320,
+        "w": 64,
+        "h": 64
+      }
+    },
+    {
+      "id": "bread-burnt",
+      "name": "Burnt bread",
+      "file": "bread-burnt.png",
+      "frame": {
+        "x": 256,
+        "y": 320,
+        "w": 64,
+        "h": 64
+      }
+    },
+    {
       "id": "goal-flag",
       "name": "Goal flag",
       "file": "goal-flag.png",
       "frame": {
-        "x": 128,
+        "x": 320,
         "y": 320,
         "w": 64,
         "h": 64
@@ -483,7 +516,7 @@
       "name": "Obstacle cone",
       "file": "obstacle-cone.png",
       "frame": {
-        "x": 192,
+        "x": 384,
         "y": 320,
         "w": 64,
         "h": 64
@@ -494,7 +527,7 @@
       "name": "Robot body",
       "file": "robot-body.png",
       "frame": {
-        "x": 256,
+        "x": 448,
         "y": 320,
         "w": 64,
         "h": 64
@@ -505,8 +538,8 @@
       "name": "Robot head",
       "file": "robot-head.png",
       "frame": {
-        "x": 320,
-        "y": 320,
+        "x": 0,
+        "y": 384,
         "w": 64,
         "h": 64
       }
@@ -516,8 +549,8 @@
       "name": "Robot wheel",
       "file": "robot-wheel.png",
       "frame": {
-        "x": 384,
-        "y": 320,
+        "x": 64,
+        "y": 384,
         "w": 64,
         "h": 64
       }
@@ -527,8 +560,8 @@
       "name": "Battery",
       "file": "battery.png",
       "frame": {
-        "x": 448,
-        "y": 320,
+        "x": 128,
+        "y": 384,
         "w": 64,
         "h": 64
       }

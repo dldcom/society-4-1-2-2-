@@ -211,15 +211,15 @@ export const jobs = [
     engine: "breadBake",
     rewardCoins: 290,
     energyCost: 1,
-    goal: "오븐 속 빵이 노릇노릇해졌을 때 꺼내요.",
+    goal: "게이지가 초록색 구간에 들어오면 빵을 꺼내요.",
     productionText: "빵을 알맞게 구워 손님이 먹을 수 있게 만드는 일은 생산 활동이에요.",
     card: { id: "card-bread-job", type: "production", badge: "🥐", title: "빵굽기 알바", description: "빵을 알맞게 구운 생산 활동", feedback: "사람들이 먹을 음식을 만드는 일은 생산 활동이에요." },
     config: {
       targetBakes: 6,
       ovens: [
-        { id: "croissant", label: "크루아상", icon: "🥐", bakeMs: 3600, perfectWindowMs: 1150 },
-        { id: "bread", label: "식빵", icon: "🍞", bakeMs: 4400, perfectWindowMs: 1200 },
-        { id: "cookie", label: "쿠키", icon: "🍪", bakeMs: 3000, perfectWindowMs: 1050 }
+        { id: "croissant", label: "크루아상", icon: "🥐", bakeMs: 4000, perfectWindowMs: 1050 },
+        { id: "bread", label: "식빵", icon: "🍞", bakeMs: 5600, perfectWindowMs: 1250 },
+        { id: "cookie", label: "쿠키", icon: "🍪", bakeMs: 2600, perfectWindowMs: 900 }
       ]
     }
   },
@@ -261,16 +261,16 @@ export const jobs = [
 ];
 
 export const consumptions = [
-  { id: "eat-pizza", placeId: "pizza-shop", title: "피자 한 조각 먹기", icon: "🍕", costCoins: 150, energyGain: 1, category: "recovery", resultSticker: "🍕", card: { id: "card-eat-pizza", type: "consumption", badge: "🍕", title: "피자 먹기", description: "번 코인으로 피자를 사 먹은 소비 활동", feedback: "돈을 내고 음식을 사 먹는 것은 소비 활동이에요." } },
-  { id: "eat-icecream", placeId: "icecream-shop", title: "아이스크림 먹기", icon: "🍦", costCoins: 180, energyGain: 1, moodGain: 1, category: "recovery", resultSticker: "🍦", card: { id: "card-eat-icecream", type: "consumption", badge: "🍦", title: "아이스크림 먹기", description: "코인을 내고 간식을 산 소비 활동", feedback: "필요하거나 원하는 물건을 사는 것은 소비 활동이에요." } },
-  { id: "buy-cape", placeId: "outfit-shop", title: "별 망토 사기", icon: "⭐", costCoins: 300, category: "outfit", equip: "별 망토", resultSticker: "⭐", card: { id: "card-buy-cape", type: "consumption", badge: "⭐", title: "별 망토 사기", description: "번 코인으로 꾸미기 물건을 산 소비 활동", feedback: "돈을 내고 물건을 사는 것도 소비 활동이에요." } },
-  { id: "watch-show", placeId: "stage", title: "공연 보기", icon: "🎟️", costCoins: 250, category: "service", resultSticker: "🎟️", card: { id: "card-watch-show", type: "consumption", badge: "🎟️", title: "공연 보기", description: "코인을 내고 공연 서비스를 이용한 소비 활동", feedback: "돈을 내고 서비스를 이용하는 것도 소비 활동이에요." } }
+  { id: "eat-pizza", placeId: "pizza-shop", title: "피자 한 조각 먹기", icon: "🍕", costCoins: 150, energyGain: 1, category: "recovery", resultSticker: "🍕", card: { id: "card-eat-pizza", type: "consumption", badge: "🍕", title: "피자 먹기", description: "번 돈으로 피자를 사 먹은 소비 활동", feedback: "돈을 내고 음식을 사 먹는 것은 소비 활동이에요." } },
+  { id: "eat-icecream", placeId: "icecream-shop", title: "아이스크림 먹기", icon: "🍦", costCoins: 180, energyGain: 1, moodGain: 1, category: "recovery", resultSticker: "🍦", card: { id: "card-eat-icecream", type: "consumption", badge: "🍦", title: "아이스크림 먹기", description: "돈을 내고 간식을 산 소비 활동", feedback: "필요하거나 원하는 물건을 사는 것은 소비 활동이에요." } },
+  { id: "buy-cape", placeId: "outfit-shop", title: "별 망토 사기", icon: "⭐", costCoins: 300, category: "outfit", equip: "별 망토", resultSticker: "⭐", card: { id: "card-buy-cape", type: "consumption", badge: "⭐", title: "별 망토 사기", description: "번 돈으로 꾸미기 물건을 산 소비 활동", feedback: "돈을 내고 물건을 사는 것도 소비 활동이에요." } },
+  { id: "watch-show", placeId: "stage", title: "공연 보기", icon: "🎟️", costCoins: 250, category: "service", resultSticker: "🎟️", card: { id: "card-watch-show", type: "consumption", badge: "🎟️", title: "공연 보기", description: "돈을 내고 공연 서비스를 이용한 소비 활동", feedback: "돈을 내고 서비스를 이용하는 것도 소비 활동이에요." } }
 ];
 
 export const activityPlaces = [
   { id: "board", label: "알바 게시판", hint: "오늘 할 수 있는 알바를 확인해요." },
   ...jobs.map((job) => ({ id: job.placeId, label: job.shortTitle, hint: job.goal })),
-  ...consumptions.map((item) => ({ id: item.placeId, label: item.title, hint: `${item.costCoins}코인 사용` }))
+  ...consumptions.map((item) => ({ id: item.placeId, label: item.title, hint: `${item.costCoins}원 사용` }))
 ];
 
 export function getJobsAtPlace(placeId) {

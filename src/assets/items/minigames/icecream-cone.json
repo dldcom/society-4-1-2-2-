@@ -1,8 +1,14 @@
 {
   "id": "icecream-cone",
-  "name": "Ice cream cone",
+  "name": "Waffle cone",
   "itemId": "icecream-cone",
   "imageExt": "png",
   "imagePath": "/assets/items/minigames/icecream-cone.png",
-  "sourceSheet": "society-minigame-items-sheet.png"
+  "sourceSheet": "icecream-spritesheet.png",
+  "frame": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 512
+  }
 }

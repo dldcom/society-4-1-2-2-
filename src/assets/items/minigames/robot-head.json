@@ -1,8 +1,12 @@
 {
   "id": "robot-head",
-  "name": "Robot head",
+  "name": "robot-head",
   "itemId": "robot-head",
   "imageExt": "png",
   "imagePath": "/assets/items/minigames/robot-head.png",
-  "sourceSheet": "society-minigame-items-sheet.png"
+  "sourceSheet": "robot-parts-spritesheet.png",
+  "frame": {
+    "row": 0,
+    "col": 1
+  }
 }

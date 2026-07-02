@@ -1,4 +1,8 @@
-const modules = import.meta.glob("../assets/items/minigames/*.png", { eager: true, import: "default" });
+const modules = import.meta.glob([
+  "../assets/items/minigames/*.png",
+  "!../assets/items/minigames/*sheet*.png",
+  "!../assets/items/minigames/*preview*.png"
+], { eager: true, import: "default" });
 
 export const minigameAssets = Object.fromEntries(
   Object.entries(modules).map(([path, source]) => {
