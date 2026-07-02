@@ -244,16 +244,12 @@ function CardBook({ productionCards, consumptionCards, onClose }) {
           <CardBookColumn
             title="생산"
             count={productionCards.length}
-            hint="알바를 해서 물건이나 서비스를 만들고 준비한 활동"
             cards={productionCards}
-            empty="아직 생산 카드가 없어요. 알바를 해 보면 여기에 기록돼요."
           />
           <CardBookColumn
             title="소비"
             count={consumptionCards.length}
-            hint="돈을 써서 물건이나 서비스를 이용한 활동"
             cards={consumptionCards}
-            empty="아직 소비 카드가 없어요. 번 돈으로 물건이나 서비스를 이용해 봐요."
           />
         </div>
       </section>
@@ -261,14 +257,13 @@ function CardBook({ productionCards, consumptionCards, onClose }) {
   );
 }
 
-function CardBookColumn({ title, count, hint, cards, empty }) {
+function CardBookColumn({ title, count, cards }) {
   return (
     <article className={`card-book-column ${title === "소비" ? "consumption" : "production"}`}>
       <div className="card-book-column-head">
         <b>{title}</b>
         <span>{count}장</span>
       </div>
-      <p>{hint}</p>
       <div className="card-book-list">
         {cards.length ? cards.map((card) => (
           <section className="learning-card" key={card.id}>
@@ -276,10 +271,9 @@ function CardBookColumn({ title, count, hint, cards, empty }) {
             <div>
               <h3>{card.title}</h3>
               <strong>{card.description}</strong>
-              <p>{card.feedback}</p>
             </div>
           </section>
-        )) : <div className="card-book-empty">{empty}</div>}
+        )) : <div className="card-book-empty">카드 없음</div>}
       </div>
     </article>
   );

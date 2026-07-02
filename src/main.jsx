@@ -15,7 +15,7 @@ const initialProgress = {
   completedConsumptions: [],
   ownedItems: [],
   stickers: [],
-  cards: []
+  cards: uniqueCards([...jobs.map((job) => job.card), ...consumptions.map((item) => item.card)])
 };
 
 function App() {
@@ -28,7 +28,7 @@ function App() {
 
   const productionCardCount = progress.cards.filter((card) => card.type === "production").length;
   const consumptionCardCount = progress.cards.filter((card) => card.type === "consumption").length;
-  const canFinish = productionCardCount >= 5 && consumptionCardCount >= 2;
+  const canFinish = true;
 
   const resetDay = (character = selectedCharacter) => {
     setSelectedCharacter(character);
