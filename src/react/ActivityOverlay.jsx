@@ -1,6 +1,8 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { jobs as allJobs, getConsumptionsAtPlace, getJobsAtPlace } from "../data/alba.js";
 import { getMiniAsset, getMiniAssetForPart, getMiniAssetForToken, getMiniAssetForWire } from "../data/minigameAssets.js";
+import npcSheetUrl from "../assets/characters/npc-town-spritesheet.png";
+import npcSheet from "../assets/characters/npc-town-spritesheet.json";
 import bakeryLabelUrl from "../assets/items/parcel-labels/split/bakery.png";
 import schoolLabelUrl from "../assets/items/parcel-labels/split/school.png";
 import stageLabelUrl from "../assets/items/parcel-labels/split/stage.png";
@@ -191,7 +193,7 @@ export function ActivityOverlay({ place, progress, onClose, onCompleteJob, onBuy
 
         <section className="npc-bottom-dialog" aria-label={`${npc.name} 대화`}>
           <div className="npc-portrait-card rpg-portrait">
-            <span>{npc.portrait ?? place.icon ?? "🙂"}</span>
+            <NpcPortrait npc={npc} fallback={place.icon} talking={!dialogComplete} />
           </div>
           <div className="npc-dialog-text">
             <div className="npc-nameplate"><b>{npc.name}</b><span>{npc.role}</span></div>
@@ -201,6 +203,31 @@ export function ActivityOverlay({ place, progress, onClose, onCompleteJob, onBuy
       </div>
     </div>
   );
+}
+
+function NpcPortrait({ npc, fallback, talking }) {
+  const frame = getNpcFrame(npc, talking);
+  if (frame == null) return <span>{npc?.portrait ?? fallback ?? "🙂"}</span>;
+  return (
+    <div
+      className="npc-sprite-portrait"
+      aria-label={npc?.name ?? "NPC"}
+      role="img"
+      style={{
+        "--npc-frame-w": `${npcSheet.frameWidth}px`,
+        "--npc-frame-h": `${npcSheet.frameHeight}px`,
+        "--npc-frame-x": `-${frame * npcSheet.frameWidth}px`,
+        backgroundImage: `url(${npcSheetUrl})`
+      }}
+    />
+  );
+}
+
+function getNpcFrame(npc, talking) {
+  if (!Number.isFinite(npc?.sprite)) return null;
+  const entry = npcSheet.frames?.find((item) => item.npc === npc.sprite);
+  if (!entry) return null;
+  return talking ? entry.talking : entry.idle;
 }
 
 function BoardJobList({ jobs }) {

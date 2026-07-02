@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+﻿import { useMemo, useRef, useState } from "react";
 import { assetUrls } from "../phaser/assets.js";
 import {
   applyPlaceOverrides,
@@ -102,7 +102,7 @@ export function PlacementEditor({ onClose }) {
   const addBlockedArea = () => {
     const area = {
       id: `area-${Date.now()}`,
-      name: `이동 금지 ${blockedAreas.length + 1}`,
+      name: `?대룞 湲덉? ${blockedAreas.length + 1}`,
       x: Math.round(WORLD.width * 0.5),
       y: Math.round(WORLD.height * 0.5),
       w: 220,
@@ -111,7 +111,7 @@ export function PlacementEditor({ onClose }) {
     setBlockedAreas((current) => [...current, area]);
     setSelectedAreaId(area.id);
     setMode("blocked");
-    setMessage("새 이동 금지 구역을 추가했어요. 맵에서 드래그해서 우물가에 맞춰주세요.");
+    setMessage("???대룞 湲덉? 援ъ뿭??異붽??덉뼱?? 留듭뿉???쒕옒洹명빐???곕Ъ媛??留욎떠二쇱꽭??");
   };
 
   const deleteBlockedArea = () => {
@@ -120,12 +120,15 @@ export function PlacementEditor({ onClose }) {
     setSelectedAreaId("");
   };
 
-  const save = () => {
+  const save = async () => {
     const placeOverrides = Object.fromEntries(places.map(({ id, x, y, w }) => [id, { x, y, w }]));
     const blocked = blockedAreas.map(({ id, name, x, y, w, h }) => ({ id, name, x, y, w, h }));
     window.localStorage.setItem(PLACE_OVERRIDE_KEY, JSON.stringify(placeOverrides));
     window.localStorage.setItem(BLOCKED_AREA_KEY, JSON.stringify(blocked));
-    setMessage("저장 완료. 새로고침하면 건물 위치와 이동 금지 구역이 게임에 적용돼요.");
+    const fixed = await saveLayoutFile({ places: placeOverrides, blockedAreas: blocked });
+    setMessage(fixed
+      ? "저장 완료. 위치가 src/data/worldLayout.json에도 고정됐어요. 다른 곳에서 실행해도 이 좌표를 씁니다."
+      : "브라우저에는 저장됐어요. 개발 서버가 아닐 때는 코드 파일 저장이 안 되니 JSON 복사로 반영해 주세요.");
   };
 
   const copyJson = async () => {
@@ -137,7 +140,7 @@ export function PlacementEditor({ onClose }) {
     }, null, 2);
     try {
       await navigator.clipboard.writeText(text);
-      setMessage("건물/이동 금지 JSON을 클립보드에 복사했어요.");
+      setMessage("嫄대Ъ/?대룞 湲덉? JSON???대┰蹂대뱶??蹂듭궗?덉뼱??");
     } catch {
       setMessage(text);
     }
@@ -157,11 +160,11 @@ export function PlacementEditor({ onClose }) {
     setPlaces(defaultPlaces.map(roundItem));
     setBlockedAreas(defaultBlockedAreas.map(roundItem));
     setSelectedAreaId("");
-    setMessage("저장된 수동 배치와 이동 금지 구역을 지웠어요.");
+    setMessage("??λ맂 ?섎룞 諛곗튂? ?대룞 湲덉? 援ъ뿭??吏?좎뼱??");
   };
 
   return (
-    <div className="placement-editor" role="dialog" aria-modal="true" aria-label="맵 편집">
+    <div className="placement-editor" role="dialog" aria-modal="true" aria-label="留??몄쭛">
       <div className="placement-map-wrap">
         <div
           ref={mapRef}
@@ -200,9 +203,9 @@ export function PlacementEditor({ onClose }) {
                 event.currentTarget.releasePointerCapture(event.pointerId);
                 setDragging(null);
               }}
-              title={`${area.name ?? "이동 금지"} (${area.x}, ${area.y})`}
+              title={`${area.name ?? "?대룞 湲덉?"} (${area.x}, ${area.y})`}
             >
-              <span>{area.name ?? "이동 금지"}</span>
+              <span>{area.name ?? "?대룞 湲덉?"}</span>
               {area.id === selectedArea?.id && resizeHandles.map((handle) => (
                 <i
                   key={handle}
@@ -270,7 +273,7 @@ export function PlacementEditor({ onClose }) {
         <div className="placement-panel-head">
           <div>
             <p className="eyebrow">Map editor</p>
-            <h2>맵 수동 조정</h2>
+            <h2>맵 배치 조정</h2>
           </div>
           <button className="icon-button" type="button" onClick={onClose}>X</button>
         </div>
@@ -315,7 +318,7 @@ export function PlacementEditor({ onClose }) {
                 <NumberField label="높이" value={selectedArea.h} min={40} max={700} onChange={(h) => updateArea(selectedArea.id, { h })} />
               </div>
             ) : (
-              <p className="placement-hint">우물, 연못, 장식물처럼 캐릭터가 못 지나갈 곳에 사각형을 추가하세요.</p>
+              <p className="placement-hint">강, 울타리, 장식물처럼 캐릭터가 못 지나갈 곳에 사각형을 추가하세요.</p>
             )}
           </>
         )}
@@ -332,6 +335,19 @@ export function PlacementEditor({ onClose }) {
       </aside>
     </div>
   );
+}
+
+async function saveLayoutFile(layout) {
+  try {
+    const response = await fetch("/__save-map-layout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(layout)
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
 }
 
 function NumberField({ label, value, min, max, onChange }) {

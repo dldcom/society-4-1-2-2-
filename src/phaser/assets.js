@@ -26,6 +26,7 @@ import snackKioskUrl from "../assets/buildings/split/snack-kiosk.png";
 import catWalkUrl from "../assets/characters/cat-walk-spritesheet.png";
 import villageBoyUrl from "../assets/characters/village-boy.png";
 import farmerUrl from "../assets/characters/farmer.png";
+import dogWalkUrl from "../assets/characters/dog-walk.png";
 import npcSheetUrl from "../assets/characters/npc-town-spritesheet.png";
 import baseTownMapUrl from "../assets/maps/base-town-map.png";
 
@@ -37,7 +38,8 @@ export const assetUrls = {
   players: {
     "player-cat": catWalkUrl,
     "player-village-boy": villageBoyUrl,
-    "player-farmer": farmerUrl
+    "player-farmer": farmerUrl,
+    "player-dog-walk": dogWalkUrl
   },
   npcs: npcSheetUrl,
   buildings: {

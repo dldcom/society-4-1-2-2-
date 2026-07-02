@@ -1,3 +1,6 @@
+@import url("https://cdn.jsdelivr.net/gh/neodgm/neodgm-webfont@1.530/neodgm/style.css");
+@import url("https://fonts.googleapis.com/css2?family=Jua&display=swap");
+
 :root {
   --ink: #3b2b24;
   --muted: #6d5d50;
@@ -6184,6 +6187,18 @@ button:disabled {
   font-size: 2.8rem;
 }
 
+.npc-sprite-portrait {
+  width: var(--npc-frame-w);
+  height: var(--npc-frame-h);
+  background-repeat: no-repeat;
+  background-size: auto var(--npc-frame-h);
+  background-position: var(--npc-frame-x) 0;
+  image-rendering: pixelated;
+  transform: scale(1.25);
+  transform-origin: center bottom;
+  filter: drop-shadow(0 4px 0 rgba(0,0,0,.12));
+}
+
 .npc-portrait-card b {
   max-width: 92px;
   text-align: center;
@@ -6594,4 +6609,591 @@ button:disabled {
   .npc-activity-panel .activity-option {
     grid-template-columns: 40px minmax(0, 1fr);
   }
+}
+
+/* Science UI theme pass: fonts and surface styling only */
+:root {
+  --ink: #212529;
+  --muted: #6c757d;
+  --paper: #dee2e6;
+  --panel: #f8f9fa;
+  --line: #6c757d;
+  --gold: #ffd166;
+  --mint: #74c69d;
+  --coral: #ff8a7a;
+  --lilac: #b8b2ff;
+  --science-bg: #dee2e6;
+  --science-panel: #f1f3f5;
+  --science-panel-soft: #f8f9fa;
+  --science-line: #ced4da;
+  --science-line-dark: #6c757d;
+  --science-shadow: rgba(0, 0, 0, .18);
+  --font-sans: "Jua", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+  --font-pixel: "NeoDunggeunmo", Galmuri11, monospace;
+  font-family: var(--font-sans);
+}
+
+body {
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.28) 1px, transparent 1px) 0 0 / 18px 18px,
+    linear-gradient(rgba(255,255,255,.28) 1px, transparent 1px) 0 0 / 18px 18px,
+    var(--science-bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button,
+.primary,
+.secondary,
+.ghost,
+.icon-button,
+.activity-card,
+.result-chip,
+.quiz-bin b,
+.result-stat b,
+.result-column-head h3 {
+  font-family: var(--font-pixel);
+}
+
+.start-screen {
+  background:
+    linear-gradient(#bde0fe 0 34%, transparent 34%),
+    linear-gradient(180deg, #dee2e6 34%, #ced4da 34% 100%);
+}
+
+.start-title-panel,
+.character-card,
+.mission-card,
+.screen-header,
+.quiz-pool,
+.quiz-bin,
+.quiz-message,
+.result-card,
+.result-column,
+.result-stat,
+.modal,
+.activity-modal,
+.reward-notification-panel,
+.npc-dialog-modal,
+.concept-quiz-modal {
+  background: var(--science-panel);
+  border-color: var(--science-line);
+  border-radius: 8px;
+  color: var(--ink);
+  box-shadow:
+    inset -4px -4px 0 rgba(0,0,0,.08),
+    inset 4px 4px 0 rgba(255,255,255,.72),
+    0 10px 25px var(--science-shadow);
+}
+
+.start-title-panel,
+.result-card,
+.modal,
+.activity-modal,
+.reward-notification-panel,
+.npc-dialog-modal,
+.concept-quiz-modal {
+  border: 6px solid var(--science-line);
+}
+
+.screen-header,
+.quiz-pool,
+.quiz-bin,
+.result-column,
+.result-stat,
+.activity-option,
+.board-note,
+.game-instruction,
+.learning-card,
+.npc-talk-panel,
+.npc-choice-panel,
+.npc-activity-panel {
+  background: var(--science-panel-soft);
+  border-color: var(--science-line);
+  box-shadow: inset -3px -3px 0 rgba(0,0,0,.06);
+}
+
+.primary,
+.secondary,
+.ghost,
+.icon-button,
+.activity-option button,
+.ingredient-tray button,
+.tool-tray button,
+.part-tray button,
+.slot-tray button,
+.role-buttons button,
+.mini-controls button,
+.dpad button,
+.concept-actions button,
+.dialog-choice-row button {
+  border: 4px solid var(--science-line-dark);
+  border-radius: 4px;
+  color: #fff;
+  text-shadow: 1px 1px 0 rgba(0,0,0,.45);
+  box-shadow:
+    inset -4px -4px 0 rgba(0,0,0,.18),
+    inset 2px 2px 0 rgba(255,255,255,.34);
+  transition: transform .1s ease, filter .1s ease, box-shadow .1s ease;
+}
+
+.primary,
+.concept-choice.selected,
+.activity-card.selected {
+  background: #52b788;
+  border-color: #2d6a4f;
+}
+
+.secondary {
+  background: #adb5bd;
+  border-color: #868e96;
+}
+
+.ghost,
+.icon-button,
+.dialog-choice-row button,
+.concept-actions button {
+  background: #adb5bd;
+  border-color: #6c757d;
+}
+
+.primary:hover,
+.secondary:hover,
+.ghost:hover,
+.icon-button:hover,
+.activity-option button:hover,
+.ingredient-tray button:hover,
+.tool-tray button:hover,
+.part-tray button:hover,
+.slot-tray button:hover,
+.role-buttons button:hover,
+.mini-controls button:hover,
+.dpad button:hover,
+.concept-actions button:hover,
+.dialog-choice-row button:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.06);
+  box-shadow:
+    inset -4px -4px 0 rgba(0,0,0,.18),
+    inset 2px 2px 0 rgba(255,255,255,.42),
+    0 4px 6px rgba(0,0,0,.18);
+}
+
+.primary:active,
+.secondary:active,
+.ghost:active,
+.icon-button:active,
+.activity-option button:active,
+.ingredient-tray button:active,
+.tool-tray button:active,
+.part-tray button:active,
+.slot-tray button:active,
+.role-buttons button:active,
+.mini-controls button:active,
+.dpad button:active,
+.concept-actions button:active,
+.dialog-choice-row button:active {
+  transform: translateY(2px);
+  box-shadow: inset 4px 4px 0 rgba(0,0,0,.28);
+}
+
+.eyebrow {
+  color: #495057;
+  font-family: var(--font-pixel);
+}
+
+.quiz-screen,
+.result-screen {
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.26) 1px, transparent 1px) 0 0 / 18px 18px,
+    linear-gradient(rgba(255,255,255,.26) 1px, transparent 1px) 0 0 / 18px 18px,
+    var(--science-bg);
+}
+
+.quiz-bin.production,
+.result-stat.production,
+.result-chip.production {
+  background: #e8f7ef;
+  border-color: #95d5b2;
+}
+
+.quiz-bin.consumption,
+.result-stat.consumption,
+.result-chip.consumption {
+  background: #e7f1ff;
+  border-color: #9ec5fe;
+}
+
+.activity-card,
+.result-chip {
+  border: 3px solid var(--science-line);
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: inset -3px -3px 0 rgba(0,0,0,.06);
+}
+
+.result-card {
+  font-family: var(--font-sans);
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px) 0 0 / 18px 18px,
+    var(--science-panel);
+}
+
+.alba-result-card {
+  border: 6px solid var(--science-line);
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px) 0 0 / 18px 18px,
+    linear-gradient(rgba(255,255,255,.5) 1px, transparent 1px) 0 0 / 18px 18px,
+    var(--science-panel);
+  box-shadow:
+    inset -4px -4px 0 rgba(0,0,0,.08),
+    inset 4px 4px 0 rgba(255,255,255,.72),
+    0 10px 25px var(--science-shadow);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+.alba-result-card .result-hero,
+.alba-result-card .result-column,
+.alba-result-card .result-stat,
+.alba-result-card .result-column-head {
+  border-color: var(--science-line);
+  background: var(--science-panel-soft);
+  box-shadow: inset -3px -3px 0 rgba(0,0,0,.06), inset 3px 3px 0 rgba(255,255,255,.65);
+}
+
+.alba-result-card .result-copy h2,
+.alba-result-card .result-column h3,
+.alba-result-card .result-stat b,
+.alba-result-card .result-column-head span,
+.alba-result-card .result-chip b {
+  color: #212529;
+  font-family: var(--font-pixel);
+  font-weight: 400;
+  text-shadow: none;
+}
+
+.alba-result-card .eyebrow,
+.alba-result-card .result-stat span {
+  color: #6c757d;
+  font-family: var(--font-pixel);
+  font-weight: 400;
+}
+
+.alba-result-card .result-character-stage,
+.alba-result-card .result-character-fallback {
+  border: 5px solid var(--science-line-dark);
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.44) 1px, transparent 1px) 0 0 / 18px 18px,
+    linear-gradient(rgba(255,255,255,.44) 1px, transparent 1px) 0 0 / 18px 18px,
+    #e9ecef;
+  box-shadow: inset -4px -4px 0 rgba(0,0,0,.1), inset 3px 3px 0 rgba(255,255,255,.7);
+}
+
+.alba-result-card .result-stat.production,
+.alba-result-card .result-chip.production {
+  background: #e8f7ef;
+  border-color: #95d5b2;
+}
+
+.alba-result-card .result-stat.consumption,
+.alba-result-card .result-chip.consumption {
+  background: #e7f1ff;
+  border-color: #9ec5fe;
+}
+
+.alba-result-card .result-chip {
+  border: 3px solid var(--science-line);
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: inset -3px -3px 0 rgba(0,0,0,.06);
+  color: #212529;
+  font-family: var(--font-pixel);
+}
+
+.result-copy h2,
+.screen-header h2,
+.start-title-panel h1 {
+  color: #212529;
+  text-shadow: none;
+}
+
+.result-character-stage,
+.result-character-fallback,
+.activity-icon,
+.result-avatar {
+  border-color: var(--science-line-dark);
+  background: #e9ecef;
+  box-shadow: inset -4px -4px 0 rgba(0,0,0,.1), inset 3px 3px 0 rgba(255,255,255,.7);
+}
+
+.game-modal {
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.26) 1px, transparent 1px) 0 0 / 18px 18px,
+    linear-gradient(180deg, #f1f3f5, #dee2e6);
+  box-shadow:
+    0 0 0 4px #868e96,
+    0 0 0 9px #ced4da,
+    0 0 0 13px #6c757d,
+    0 22px 42px rgba(0,0,0,.28),
+    inset 0 0 0 4px rgba(255,255,255,.45);
+}
+
+.game-head,
+.game-body {
+  border-color: #868e96;
+  background: var(--science-panel-soft);
+  box-shadow: inset -4px -4px 0 rgba(0,0,0,.08), inset 4px 4px 0 rgba(255,255,255,.72);
+}
+
+.game-modal::before,
+.game-modal::after {
+  border-color: #6c757d;
+  background: #ced4da;
+}
+
+.concept-quiz-modal {
+  width: min(820px, 94vw);
+  border: 6px solid var(--science-line);
+  background: var(--science-panel);
+  box-shadow:
+    inset -4px -4px 0 rgba(0,0,0,.08),
+    inset 4px 4px 0 rgba(255,255,255,.72),
+    0 10px 25px var(--science-shadow);
+}
+
+.concept-quiz-modal .game-head {
+  border: 4px solid var(--science-line-dark);
+  background: var(--science-panel-soft);
+  box-shadow:
+    inset -3px -3px 0 rgba(0,0,0,.08),
+    inset 3px 3px 0 rgba(255,255,255,.72);
+}
+
+.concept-question {
+  border: 3px solid var(--science-line);
+  background: #f8f9fa;
+  color: #212529;
+  box-shadow: inset -3px -3px 0 rgba(0,0,0,.06);
+  font-family: var(--font-pixel);
+  font-size: 1.08rem;
+  font-weight: 400;
+}
+
+.concept-choice {
+  min-height: 104px;
+  border: 4px solid var(--science-line-dark);
+  border-radius: 6px;
+  color: #212529;
+  font-family: var(--font-pixel);
+  font-size: 1.35rem;
+  font-weight: 400;
+  text-shadow: none;
+  box-shadow:
+    inset -4px -4px 0 rgba(0,0,0,.12),
+    inset 3px 3px 0 rgba(255,255,255,.62),
+    0 6px 0 rgba(108,117,125,.42);
+}
+
+.concept-choice.production {
+  background: #e8f7ef;
+  border-color: #95bda8;
+}
+
+.concept-choice.consumption {
+  background: #e7f1ff;
+  border-color: #9fb9d6;
+}
+
+.concept-choice.selected {
+  background: #52b788;
+  border-color: #2d6a4f;
+  color: #fff;
+  outline: 4px solid rgba(82, 183, 136, .28);
+  box-shadow:
+    inset -4px -4px 0 rgba(0,0,0,.18),
+    inset 2px 2px 0 rgba(255,255,255,.34),
+    0 6px 0 #2d6a4f;
+  text-shadow: 1px 1px 0 rgba(0,0,0,.45);
+}
+
+.concept-actions button:disabled,
+.primary:disabled,
+.secondary:disabled,
+.ghost:disabled {
+  background: #ced4da;
+  border-color: #adb5bd;
+  color: #fff;
+  opacity: 1;
+  filter: none;
+  text-shadow: 1px 1px 0 rgba(0,0,0,.35);
+  box-shadow:
+    inset -4px -4px 0 rgba(0,0,0,.12),
+    inset 2px 2px 0 rgba(255,255,255,.28);
+}
+
+.concept-feedback {
+  border: 3px solid var(--science-line);
+  background: #f8f9fa;
+  color: #212529;
+  box-shadow: inset -3px -3px 0 rgba(0,0,0,.06);
+  font-family: var(--font-sans);
+}
+
+.concept-feedback.hint {
+  border-color: #ffd166;
+  background: #fff3bf;
+  color: #5f4b1f;
+}
+
+.concept-feedback.correct {
+  border-color: #95d5b2;
+  background: #e8f7ef;
+  color: #24533a;
+}
+
+.card-book-overlay {
+  background: rgba(33, 37, 41, .42);
+  backdrop-filter: blur(7px) saturate(1.04);
+}
+
+.card-book-panel {
+  border: 6px solid var(--science-line);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.28) 1px, transparent 1px) 0 0 / 18px 18px,
+    linear-gradient(rgba(255,255,255,.28) 1px, transparent 1px) 0 0 / 18px 18px,
+    var(--science-panel);
+  box-shadow:
+    inset -4px -4px 0 rgba(0,0,0,.08),
+    inset 4px 4px 0 rgba(255,255,255,.72),
+    0 10px 25px var(--science-shadow);
+}
+
+.card-book-head {
+  border: 4px solid var(--science-line-dark);
+  border-radius: 6px;
+  background: var(--science-panel-soft);
+  box-shadow:
+    inset -3px -3px 0 rgba(0,0,0,.08),
+    inset 3px 3px 0 rgba(255,255,255,.72);
+}
+
+.card-book-head .eyebrow,
+.card-book-head h2 {
+  color: #212529;
+  text-shadow: none;
+}
+
+.card-book-head .icon-button {
+  border: 4px solid #6c757d;
+  background: #adb5bd;
+  color: #fff;
+  box-shadow:
+    inset -4px -4px 0 rgba(0,0,0,.18),
+    inset 2px 2px 0 rgba(255,255,255,.34);
+}
+
+.card-book-column,
+.card-book-column.consumption {
+  border: 4px solid var(--science-line);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px) 0 0 / 18px 18px,
+    var(--science-panel-soft);
+  box-shadow: inset -4px -4px 0 rgba(0,0,0,.06), inset 4px 4px 0 rgba(255,255,255,.6);
+}
+
+.card-book-column.consumption {
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px) 0 0 / 18px 18px,
+    #e7f1ff;
+}
+
+.card-book-column-head b {
+  color: #212529;
+  font-family: var(--font-pixel);
+  font-weight: 400;
+}
+
+.card-book-column-head span {
+  border: 3px solid var(--science-line-dark);
+  border-radius: 999px;
+  background: #52b788;
+  color: #fff;
+  font-family: var(--font-pixel);
+  font-weight: 400;
+  text-shadow: 1px 1px 0 rgba(0,0,0,.35);
+  box-shadow:
+    inset -3px -3px 0 rgba(0,0,0,.16),
+    inset 2px 2px 0 rgba(255,255,255,.32);
+}
+
+.card-book-column.consumption .card-book-column-head span {
+  background: #adb5bd;
+  border-color: #6c757d;
+}
+
+.learning-card {
+  border: 3px solid var(--science-line);
+  border-radius: 8px;
+  background: #f8f9fa;
+  box-shadow: inset -3px -3px 0 rgba(0,0,0,.06), inset 3px 3px 0 rgba(255,255,255,.6);
+}
+
+.learning-card-badge {
+  border: 4px solid var(--science-line-dark);
+  border-radius: 6px;
+  background: #fff3bf;
+  box-shadow: inset -4px -4px 0 rgba(0,0,0,.1), inset 3px 3px 0 rgba(255,255,255,.65);
+}
+
+.learning-card h3,
+.learning-card strong,
+.learning-card p {
+  color: #212529;
+}
+
+.learning-card h3 {
+  font-family: var(--font-pixel);
+  font-weight: 400;
+}
+
+.learning-card strong,
+.learning-card p {
+  font-family: var(--font-sans);
+}
+
+.card-book-empty {
+  border: 3px dashed var(--science-line);
+  background: #f8f9fa;
+  color: #6c757d;
+}
+
+.npc-portrait-card {
+  min-width: 112px;
+  min-height: 132px;
+  overflow: hidden;
+  border: 4px solid var(--science-line-dark);
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px) 0 0 / 16px 16px,
+    #e9ecef;
+  box-shadow: inset -4px -4px 0 rgba(0,0,0,.1), inset 3px 3px 0 rgba(255,255,255,.7);
+}
+
+.npc-bottom-dialog .npc-sprite-portrait {
+  margin-top: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #e9ecef;
+  border-left: 2px solid #ced4da;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #adb5bd;
+  border: 2px solid #f1f3f5;
+  border-radius: 4px;
 }

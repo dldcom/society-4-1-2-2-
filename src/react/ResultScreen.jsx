@@ -2,9 +2,9 @@ import { useRef } from "react";
 import { toPng } from "html-to-image";
 import { assetUrls } from "../phaser/assets.js";
 
-const RESULT_FONT_FAMILY = "Galmuri11, 'Malgun Gothic', 'Apple SD Gothic Neo', system-ui, sans-serif";
+const RESULT_FONT_FAMILY = "'Jua', 'Malgun Gothic', 'Apple SD Gothic Neo', system-ui, sans-serif";
 
-export function ResultScreen({ character, progress, onRestart }) {
+export function ResultScreen({ character, progress, onBack }) {
   const cardRef = useRef(null);
   const productions = progress.cards.filter((card) => card.type === "production");
   const consumptions = progress.cards.filter((card) => card.type === "consumption");
@@ -68,7 +68,7 @@ export function ResultScreen({ character, progress, onRestart }) {
       </div>
       <div className="result-actions">
         <button className="primary" onClick={save}>{"\uC774\uBBF8\uC9C0 \uC800\uC7A5\uD558\uAE30"}</button>
-        <button className="secondary" onClick={onRestart}>{"\uB2E4\uC2DC \uD558\uB8E8 \uC2DC\uC791"}</button>
+        <button className="secondary" onClick={onBack}>{"\uB3CC\uC544\uAC00\uAE30"}</button>
       </div>
     </section>
   );
@@ -129,7 +129,7 @@ async function saveResultAsPng(node, filename) {
     const dataUrl = await toPng(node, {
       cacheBust: true,
       pixelRatio: Math.max(2, Math.ceil(window.devicePixelRatio || 1)),
-      backgroundColor: "#f4dfaa",
+      backgroundColor: "#dee2e6",
       width,
       height,
       style: {
@@ -149,7 +149,7 @@ async function saveResultAsPng(node, filename) {
 async function ensureResultFonts() {
   if (!document.fonts) return;
   await Promise.all([
-    document.fonts.load(resultFont(700, 34), "\uC0DD\uC0B0\u00B7\uC18C\uBE44 \uD65C\uB3D9 \uC778\uC99D\uC11C"),
+    document.fonts.load(resultFont(400, 34), "\uC0DD\uC0B0\u00B7\uC18C\uBE44 \uD65C\uB3D9 \uC778\uC99D\uC11C"),
     document.fonts.load(resultFont(400, 17), "\uC624\uB298\uC758 \uC54C\uBC14\uC655")
   ]);
   await document.fonts.ready;

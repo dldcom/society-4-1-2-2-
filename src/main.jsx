@@ -138,7 +138,7 @@ function App() {
           progress={progress}
           jobMap={jobMap}
           consumptionMap={consumptionMap}
-          onRestart={resetDay}
+          onBack={() => setScreen("game")}
         />
       )}
       {pendingActivity && (

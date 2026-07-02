@@ -5,6 +5,8 @@
   interactionRadius: 150
 };
 
+import committedLayout from "./worldLayout.json";
+
 export const PLACE_OVERRIDE_KEY = "alba-town-place-overrides-v1";
 export const BLOCKED_AREA_KEY = "alba-town-blocked-areas-v1";
 
@@ -20,15 +22,17 @@ export const defaultPlaces = [
   { id: "plaza", name: "광장", x: 1600, y: 705, w: 330, building: "school", icon: "🏛️", npc: { name: "로봇 박사", role: "마을 연구자", portrait: "🤖", sprite: 8, greeting: "아, 안녕. 광장은 늘 소란스럽지만 그래서 관찰할 게 많단다.", jobLine: "배달 로봇이 광장 한가운데서 멈춰 버렸어. 몸통, 머리, 바퀴, 전원. 순서대로만 맞추면 다시 씩씩하게 움직일 거야.", shopLine: "광장엔 살 물건은 별로 없어도 들을 이야기는 많단다. 잠깐 쉬어 가도 좋아." } }
 ];
 
-export const defaultBlockedAreas = [];
+const committedPlaceOverrides = normalizePlaceOverrides(committedLayout.places);
+export const defaultBlockedAreas = normalizeBlockedAreas(committedLayout.blockedAreas);
 
 export function loadPlaceOverrides() {
-  if (typeof window === "undefined") return {};
+  const base = { ...committedPlaceOverrides };
+  if (typeof window === "undefined") return base;
   try {
     const saved = window.localStorage.getItem(PLACE_OVERRIDE_KEY);
-    return saved ? JSON.parse(saved) : {};
+    return saved ? { ...base, ...normalizePlaceOverrides(JSON.parse(saved)) } : base;
   } catch {
-    return {};
+    return base;
   }
 }
 
@@ -50,19 +54,32 @@ export function loadBlockedAreas() {
   try {
     const saved = window.localStorage.getItem(BLOCKED_AREA_KEY);
     if (!saved) return defaultBlockedAreas;
-    const parsed = JSON.parse(saved);
-    if (!Array.isArray(parsed)) return defaultBlockedAreas;
-    return parsed.filter((area) => (
-      area &&
-      typeof area.id === "string" &&
-      Number.isFinite(area.x) &&
-      Number.isFinite(area.y) &&
-      Number.isFinite(area.w) &&
-      Number.isFinite(area.h)
-    ));
+    return normalizeBlockedAreas(JSON.parse(saved));
   } catch {
     return defaultBlockedAreas;
   }
+}
+
+function normalizePlaceOverrides(overrides) {
+  if (!overrides || typeof overrides !== "object" || Array.isArray(overrides)) return {};
+  return Object.fromEntries(Object.entries(overrides).filter(([, value]) => (
+    value &&
+    Number.isFinite(value.x) &&
+    Number.isFinite(value.y) &&
+    Number.isFinite(value.w)
+  )));
+}
+
+function normalizeBlockedAreas(areas) {
+  if (!Array.isArray(areas)) return [];
+  return areas.filter((area) => (
+    area &&
+    typeof area.id === "string" &&
+    Number.isFinite(area.x) &&
+    Number.isFinite(area.y) &&
+    Number.isFinite(area.w) &&
+    Number.isFinite(area.h)
+  ));
 }
 
 export const places = applyPlaceOverrides();

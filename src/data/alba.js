@@ -64,6 +64,28 @@
         left: [18, 23]
       }
     }
+  },
+  {
+    id: "dog-walk",
+    name: "강아지",
+    icon: "🐶",
+    role: "두 발로 통통 걷는 귀여운 픽셀 강아지",
+    item: "옷을 입지 않은 강아지 4방향 걷기 스프라이트",
+    sprite: {
+      key: "player-dog-walk",
+      frameWidth: 48,
+      frameHeight: 64,
+      displayWidth: 78,
+      displayHeight: 104,
+      offsetY: -18,
+      idle: { down: 0, up: 4, left: 8, right: 12 },
+      walk: {
+        down: [0, 3],
+        up: [4, 7],
+        left: [8, 11],
+        right: [12, 15]
+      }
+    }
   }
 ];
 
